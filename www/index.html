@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<!--
+    Licensed to the Apache Software Foundation (ASF) under one
+    or more contributor license agreements.  See the NOTICE file
+    distributed with this work for additional information
+    regarding copyright ownership.  The ASF licenses this file
+    to you under the Apache License, Version 2.0 (the
+    "License"); you may not use this file except in compliance
+    with the License.  You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing,
+    software distributed under the License is distributed on an
+    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+     KIND, either express or implied.  See the License for the
+    specific language governing permissions and limitations
+    under the License.
+-->
+<html>
+    <head>
+
+        <meta charset="utf-8" />
+        <meta name="format-detection" content="telephone=no" />
+        <!-- WARNING: for iOS 7, remove the width=device-width and height=device-height attributes. See https://issues.apache.org/jira/browse/CB-4323 -->
+        <meta name="viewport" content="user-scalable=no, initial-scale=1, maximum-scale=1, minimum-scale=1, width=device-width, height=device-height" />
+ 		<!--, target-densitydpi=device-dpi disabilitato da precedente per incompatibilita -->
+        <title>Realtor</title>
+ 
+   		<link rel="stylesheet" type="text/css" href="js/jquery/jquery.mobile-1.4.2.min.css" />
+        <link rel="stylesheet" type="text/css" href="css/index.css" />
+        
+        <!-- Carico prima le librerie   -->
+        <script type="text/javascript" src="cordova.js"></script>
+        
+        <script type="text/javascript" src="js/jquery/jquery-2.1.0.min.js"></script>
+        <script type="text/javascript" src="js/jquery/jquery.mobile-1.4.2.min.js"></script>
+   
+        <script type="text/javascript" src="js/index.js"></script>
+        
+		
+    </head>
+    <body>
+ <!--
+        <div class="app">
+            <h1>Realtor</h1>
+            <div id="deviceready" class="blink">
+
+                <p class="event listening">Connecting to Device</p>
+                <p class="event received">Device is Ready</p>
+            </div>
+         </div>
+	-->
+    
+            <div data-role="page" id="homePage">
+    			<div data-theme="a" data-role="header">
+      			  <h3>Schede immobiliari</h3>
+      			  <a id="btnExit" data-role="button" href="#homePage" data-icon="power" data-iconpos="right" class="ui-btn-right"></a>
+    			</div>
+ 
+  				<div data-role="content">
+        			<a data-role="button" href="#scheda" data-icon="plus" data-iconpos="left">Nuova scheda</a>
+        			<a data-role="button" href="#elencoSchede" data-icon="bars" data-iconpos="left">Elenco schede</a>
+        			<a id="btnInviaSchede" data-role="button" href="#page1" data-icon="forward" data-iconpos="left">Invia schede</a>
+		  		  </div>
+ 
+  				<div data-theme="a" data-role="footer" data-position="fixed">
+        			<h3>Schede immobiliari</h3>
+        		</div>
+			</div>
+			
+ 		   <div data-role="page" id="scheda">
+  			  <div data-theme="" data-role="header">
+  		  		 <a id="btnBack" data-role="button" href="#homePage" data-icon="back" data-iconpos="left" class="ui-btn-left"></a>
+   			     <h3>Nuova scheda</h3>
+ 			  </div>
+ 		
+ 		 	  <div data-role="content">
+       			 <div data-role="fieldcontain">
+      		      <input name="txtNome" id="txtNome" placeholder="Nome scheda" value="" type="text">
+    		  </div>
+        	  <div data-role="fieldcontain">
+            		<input name="txtIndirizzo" id="txtIndirizzo" placeholder="Indirizzo" value="" type="text">
+              </div>
+       		  <div data-role="fieldcontain">
+            		<textarea name="txtDescrizione" id="txtDescrizione" placeholder="Descrizione"></textarea>
+        	  </div>
+        	  <div data-role="fieldcontain">
+            		<input name="txtPrezzo" id="txtPrezzo" placeholder="Prezzo" value="" type="number">
+        	  </div>
+        	  <div data-role="fieldcontain">
+            		<a id="btnSalva" data-role="button" href="#">Salva</a>
+              </div>
+    		</div>
+     
+    		<div data-theme="a" data-role="footer" data-position="fixed">
+        		<h3>Schede immobiliari</h3>
+    		</div>
+		</div>
+
+		<div data-role="page" id="elencoSchede">
+		    <div data-theme="" data-role="header">
+        		<a id="btnBack" data-role="button" href="#homePage" data-icon="back" data-iconpos="left" class="ui-btn-left"></a>
+      			<h3>Schede immobiliari</h3>
+    		</div>
+ 
+	    	<div data-role="content">
+    	    <ul id="liElencoSchede" data-role="listview" data-divider-theme="d" data-inset="true">
+            <!--	<li data-role="list-divider" role="heading">Schede</li>
+           		 <li data-theme="c">
+                		<a href="#scheda" data-transition="slide">Appartamento Firenze Centro</a>
+           		 </li>
+           		 <li data-theme="c">
+                	<a href="#scheda" data-transition="slide">Villa Roma Trastevere</a>
+            	 </li>
+           		 <li data-theme="c">
+                		<a href="#scheda" data-transition="slide">Villetta a schiera Napoli Vomero</a>
+            	 </li>
+            	 -->	
+        	</ul>
+    		</div>
+     
+   			 <div data-theme="a" data-role="footer" data-position="fixed">
+        			<h3>Schede immobiliari</h3>
+   			 </div>
+		</div>
+
+         <script type="text/javascript">
+                  //  app.initialize();
+    	   $(document).ready(function() {
+   				 app.initialize();
+		   });
+        </script>
+    </body>
+    
+    
+    
+</html>
