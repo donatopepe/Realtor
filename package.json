@@ -1,0 +1,44 @@
+{
+  "name": "realtor",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Applicazione di statistica e stime immobiliari: gestione offline-first di schede immobiliari, distribuita come PWA e come app Android (Cordova).",
+  "license": "MIT",
+  "author": {
+    "name": "Donato Pepe",
+    "email": "[PRIVATE_EMAIL]",
+    "url": "https://github.com/donatopepe"
+  },
+  "homepage": "https://github.com/donatopepe/Realtor#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/donatopepe/Realtor.git"
+  },
+  "bugs": {
+    "url": "https://github.com/donatopepe/Realtor/issues"
+  },
+  "keywords": [
+    "cordova",
+    "android",
+    "pwa",
+    "real-estate",
+    "jquery-mobile",
+    "offline-first"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "serve": "node scripts/serve.js",
+    "test": "node --test tests/unit/ tests/integration/",
+    "test:coverage": "node --test --experimental-test-coverage tests/unit/ tests/integration/",
+    "test:e2e": "playwright test",
+    "lint": "eslint .",
+    "server": "node server/src/server.js",
+    "server:test": "node --test server/test/",
+    "docs:check": "node scripts/docs-check.js",
+    "prepare:android": "cordova platform add android",
+    "build:android": "cordova build android",
+    "build:android:release": "cordova build android --release"
+  }
+}

@@ -1,0 +1,49 @@
+# Dependencies
+node_modules/
+
+# Test / coverage / e2e output
+coverage/
+playwright-report/
+test-results/
+.jest-cache/
+
+# Cordova generated folders (regenerate: npm run prepare:android)
+platforms/
+plugins/
+
+# Build outputs
+dist/
+build/
+out/
+*.apk
+*.aab
+*.ap_
+*.ipa
+
+# Android / Gradle / signing
+.gradle/
+local.properties
+*.keystore
+*.jks
+*.hprof
+
+# IDE / editors / OS
+.idea/
+*.iml
+.vscode/
+*.swp
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# Local agent state
+.pi-loop.json
+.pi-loop.json.lock
+
+# Secrets and personal data (never published)
+.env
+.env.*
+001014428tesi.pdf
