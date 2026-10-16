@@ -14,7 +14,7 @@
 | D2 | Prompt ingegnerizzato | ✅ fatto | `docs/ENGINEERED-PROMPT.md` |
 | D3 | Piano in un file | ✅ fatto | questo file |
 | D4 | Loop di lavorazione | ✅ creato (cron durable) | task `realtor-modernizzazione` |
-| D5 | Progetto corretto, testato, documentato, MIT, distribuibile | ⏳ in corso | milestone M0→M7 |
+| D5 | Progetto corretto, testato, documentato, MIT, distribuibile | ⏳ in corso — M0 ✅, AC 2/15 | milestone M0→M7 |
 
 ---
 
@@ -109,16 +109,16 @@ Principi: logica core pura e iniettabile → testabile in Node senza device; `ww
 
 ## 6. Milestone e gate
 
-| M | Contenuto | Gate (comando) | AC |
-|---|-----------|----------------|-----|
-| M0 | Igiene repo: `.gitignore`, `.gitattributes` (LF), untrack `platforms/ plugins/` e `001014428tesi.pdf` (file locale conservato), normalizzazione mode, `package.json`, `LICENSE` MIT, `NOTICE`, `CHANGELOG.md`, README scheletro, rimozione `.bat` legacy | `git ls-files \| wc -l` ≤ 260, `LICENSE` MIT, `npm ci` ok | AC-12, AC-13 |
+| M | Contenuto | Gate (comando) | AC | Stato |
+|---|-----------|----------------|-----|-------|
+| M0 | Igiene repo: `.gitignore`, `.gitattributes` (LF), untrack `platforms/ plugins/` e `001014428tesi.pdf` (file locale conservato), normalizzazione mode, `package.json`, `LICENSE` MIT, `NOTICE`, `CHANGELOG.md`, README scheletro, rimozione `.bat` legacy | `git ls-files \| wc -l` ≤ 260, `LICENSE` MIT, `npm ci` ok | AC-12, AC-13 | ✅ 2026-10-16 |
 | M1 | Fix encoding UTF-8, estrazione core in ES module senza cambio di comportamento, setup vitest + primo giro di test | `npm test` verde, `grep FFFD` = 0 | AC-01, AC-04, AC-14 |
 | M2 | Fix funzionali: validazione/schema, invio senza data loss, POST JSON corretto, pagina Impostazioni con URL API e modalità offline, export/import backup, fallback web platform | `npm test` verde | AC-06, AC-07, AC-08, AC-09 |
 | M3 | Server di riferimento + test integration + Dockerfile + `docs/API.md` | `npm run server:test` verde | AC-10 |
 | M4 | E2E Playwright (≥6 scenari) + PWA manifest + screenshot per README | `npm run test:e2e` verde | AC-03, AC-06 |
 | M5 | Cordova moderno: `cordova-android@^14`, `config.xml` (id `net.dntppe.realtor`, v1.0.0, engine+plugin dichiarati, preference, minSdk/targetSdk), platform ricreato, plugin ridotti ai soli usati, build APK | `npx cordova build android` → APK | AC-05 |
 | M6 | Documentazione completa (README EN + quick start IT, ARCHITECTURE, MIGRATION, PUBLISHING, CONTRIBUTING, SECURITY, CODE_OF_CONDUCT) + lint + CI | `npm run lint` verde, `npm run docs:check` verde | AC-02, AC-11 |
-| M7 | Rilascio: commit, push, tag `v1.0.0`, GitHub Release con APK, CI verde | `gh run list --limit 1` = success | AC-15 |
+| M7 | Rilascio: commit, push, tag `v1.0.0`, GitHub Release con APK, CI verde | `gh run list --limit 1` = success | AC-15 | ⏳ |
 
 Regola di gate: un milestone è ✅ solo con output grezzo dei comandi registrato in §9.
 
@@ -152,6 +152,7 @@ Regola di gate: un milestone è ✅ solo con output grezzo dei comandi registrat
 | Data | M | Comando/gate | Esito | Note |
 |------|---|--------------|-------|------|
 | 2026-10-16 | — | audit read-only + `npm`/`cordova build` baseline | ❌ 0/15 AC | baseline registrata in §2 |
+| 2026-10-16 | M0 | `git ls-files \| wc -l` (≤260); `head -1 LICENSE`; `node -p require('./package.json').license`; `git ls-files \| grep -Ec "^(platforms\|plugins\|node_modules)/"`; `npm ci`; `git status --porcelain` | ✅ **DONE** | 235 file tracciati; `MIT License`; licenza `MIT`; 0 artefatti; 0 pdf; `npm ci` ok (0 vulnerabilità); working tree pulito. Commit `M0: igiene repo, licenza MIT, package.json e rimozione artefatti`. AC ✅: AC-12, AC-13 (**2/15**) |
 
 ---
 
