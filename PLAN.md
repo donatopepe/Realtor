@@ -14,7 +14,7 @@
 | D2 | Prompt ingegnerizzato | ✅ fatto | `docs/ENGINEERED-PROMPT.md` |
 | D3 | Piano in un file | ✅ fatto | questo file |
 | D4 | Loop di lavorazione | ✅ creato (cron durable) | task `realtor-modernizzazione` |
-| D5 | Progetto corretto, testato, documentato, MIT, distribuibile | ⏳ in corso — M0, M1, M2 ✅, AC 10/21 | milestone M0→M8 |
+| D5 | Progetto corretto, testato, documentato, MIT, distribuibile | ⏳ in corso — M0, M1, M2 ✅, AC 11/22 | milestone M0→M8 |
 | D6 | Cross-platform: stesso sorgente per **Android, iOS, web/PWA** (desktop Electron opzionale) | ✅ fondamenta (M2); build per piattaforma in M6 | `www/`, `config.xml`, `resources/`, `scripts/serve.js` |
 | D7 | Igiene dei segreti: nessuna credenziale nel working tree **né nella storia git**, con scansione automatica nei test | ✅ fatto (M2) | `scripts/scan-secrets.js`, `tests/unit/secrets.test.js` |
 
