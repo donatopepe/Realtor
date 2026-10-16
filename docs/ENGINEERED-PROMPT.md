@@ -37,11 +37,14 @@ PROTOCOLLO DI ITERAZIONE (una sola iterazione per esecuzione)
 REGOLE
 - Mai marcare ✅ senza output di comando registrato in §9.
 - Un criterio AC è soddisfatto solo se il suo comando in PLAN.md §4 passa; AC-01..AC-12 sono
-  hard gate (soglia AC pass ratio >= 0.95 su 21 criteri).
+  hard gate (soglia AC pass ratio >= 0.95 su 22 criteri).
 - Cross-platform: un solo sorgente `www/` per Android, iOS e web/PWA. Nessun ramo condizionale
   per piattaforma nel codice dell'app: solo feature detection, isolata in `www/js/platform.js`.
   Non introdurre dipendenze che rompono una delle tre piattaforme (niente API Node-only nel web).
 - Non introdurre endpoint privati o hardcoded; l'API e' configurabile da UI, default offline.
+- Nessun segreto nel repo: dopo ogni iterazione `npm run scan:secrets:history` deve restare a 0
+  occorrenze; se compare un segreto, rimuoverlo dal working tree E dalla storia (git filter-repo)
+  e aggiornare il remoto con --force-with-lease, documentando backup ed esito.
 - Nessuna rimozione di dati utente: la rimozione locale di una scheda avviene solo dopo 2xx.
 - Non committare artefatti di build (platforms/, plugins/, node_modules/, APK, keystore),
   non committare 001014428tesi.pdf, non usare `npm publish`.
