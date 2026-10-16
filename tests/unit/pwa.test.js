@@ -18,6 +18,7 @@ const www = join(root, 'www');
 const manifest = JSON.parse(readFileSync(join(www, 'manifest.webmanifest'), 'utf8'));
 const indexHtml = readFileSync(join(www, 'index.html'), 'utf8');
 const config = readFileSync(join(root, 'config.xml'), 'utf8');
+const pkg = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'));
 
 /**
  * Legge le dimensioni reali di un PNG dai byte dell'header IHDR.
@@ -67,7 +68,6 @@ test('index.html collega manifest, icone e meta per l’installazione su ogni pi
 });
 
 test('config.xml: identità dell’app allineata a package.json', () => {
-  const pkg = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'));
   assert.match(config, /<widget id="net\.dntppe\.realtor" version="1\.0\.0"/);
   assert.match(config, new RegExp(`version="${pkg.version.replace(/\./g, '\\.')}"`));
   assert.match(config, /<content src="index\.html" \/>/);
@@ -75,14 +75,25 @@ test('config.xml: identità dell’app allineata a package.json', () => {
   assert.doesNotMatch(config, /realtor\.dntppe\.net/);
 });
 
-test('config.xml dichiara le piattaforme android, ios e browser', () => {
-  for (const platform of ['android', 'ios', 'browser']) {
+test('config.xml dichiara le piattaforme native android e ios', () => {
+  for (const platform of ['android', 'ios']) {
     assert.match(config, new RegExp(`<platform name="${platform}">`), `manca la piattaforma ${platform}`);
   }
+  // Il web non passa da cordova-browser (incompatibile con "type": "module"):
+  // la piattaforma web è la PWA servita staticamente (manifest + service worker).
+  assert.doesNotMatch(config, /<platform name="browser">/);
+  assert.match(config, /cordova-browser/);
   assert.match(config, /android-minSdkVersion" value="24"/);
-  assert.match(config, /android-targetSdkVersion" value="35"/);
+  assert.match(config, /android-targetSdkVersion" value="36"/);
   assert.match(config, /deployment-target" value="13\.0"/);
   assert.match(config, /WKWebViewOnly" value="true"/);
+});
+
+test('i plugin Cordova usati dall’app sono dichiarati in config.xml e in package.json', () => {
+  for (const plugin of ['cordova-plugin-dialogs', 'cordova-plugin-network-information']) {
+    assert.match(config, new RegExp(`<plugin name="${plugin}"`), `manca ${plugin} in config.xml`);
+    assert.ok(pkg.devDependencies[plugin], `manca ${plugin} in devDependencies`);
+  }
 });
 
 test('config.xml: le icone native dichiarate esistono e sono PNG validi', () => {
