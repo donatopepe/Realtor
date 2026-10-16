@@ -24,7 +24,7 @@ import { basename } from 'node:path';
 export const IGNORED_FILES = new Set(['scan-secrets.js', 'secrets.test.js']);
 
 /** Valori evidentemente fittizi: non sono segreti. */
-const PLACEHOLDER = /^(?:\$\{|\{\{|<|%|x{3,}|\.{3,}|-+|change|cambia|modifica|inserisci|inserire|segnaposto|replace|example|placeholder|your|test|dummy|fake|sample|todo|redacted|secret$|password$|token$|api[_-]?key$|access[_-]?token$)/i;
+const PLACEHOLDER = /^(?:\$[A-Za-z_{]|\{\{|<|%|x{3,}|\.{3,}|-+|change|cambia|modifica|inserisci|inserire|segnaposto|replace|example|placeholder|your|test|dummy|fake|sample|todo|redacted|secret$|password$|token$|api[_-]?key$|access[_-]?token$)/i;
 
 /**
  * @typedef {object} Pattern
@@ -89,7 +89,9 @@ export const PATTERNS = [
   {
     id: 'keystore-password',
     description: 'password di keystore Android',
-    regex: /^\s*(?:store|key)Password\s*[=:]\s*\S+/m,
+    // Il valore catturato passa dai controlli sui placeholder: le variabili
+    // d'ambiente e i segnaposto di esempio non sono segnalati.
+    regex: /^\s*(?:store|key)Password\s*[=:]\s*(\S+)/m,
   },
   {
     id: 'jwt',

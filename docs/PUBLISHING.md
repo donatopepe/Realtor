@@ -76,9 +76,15 @@ Serve **macOS con Xcode**; su Linux/Windows la compilazione non è possibile.
 
 ```bash
 npm ci
-npx cordova platform add ios
+npm run prepare:ios               # platform add + workaround ESM (vedi nota)
 cordova build ios --emulator      # build senza firma, per prova
 ```
+
+Nota tecnica: `cordova-ios` copia nel progetto file CommonJS che Node tratterebbe come ESM,
+perché il `package.json` principale ha `"type": "module"`. `npm run prepare:ios`
+(`scripts/ios-prepare.js`) tollera quell'errore noto, scrive `platforms/ios/package.json`
+con `{"type":"commonjs"}` e completa la preparazione: usare quello al posto di
+`cordova platform add ios`.
 
 Per installare su dispositivi/TestFlight:
 

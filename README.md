@@ -164,6 +164,7 @@ Nessun ramo condizionale per piattaforma nel codice: le differenze passano da
 | Nel browser compare un 404 su `cordova.js` | Usa `npm run serve` (serve uno shim) oppure ignora: nel browser l'app usa i fallback web |
 | I pulsanti non reagiscono su desktop | Aggiorna all'ultima versione: fino a M4 i comandi erano legati solo all'evento `tap` (touch) |
 | `npm run test:e2e` chiede un browser | `npx playwright install chromium` |
+| `cordova platform add ios` termina con "module is not defined in ES module scope" | Usa `npm run prepare:ios`: gestisce l'incompatibilità fra i file CommonJS di cordova-ios e `"type": "module"` |
 | L'invio dice "Endpoint API non configurato" | È il comportamento previsto in modalità offline: imposta l'endpoint in Impostazioni |
 
 ## Licenza
