@@ -49,7 +49,8 @@ jobs:
       - name: SBOM CycloneDX
         run: npm run sbom
 
-      - name: Audit completo dipendenze (runtime + toolchain)
+      - name: Report completo dipendenze (toolchain incluse; non bloccante)
+        continue-on-error: true
         run: npm run audit:report
 
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
@@ -74,9 +75,18 @@ jobs:
       - name: Vulnerabilità delle dipendenze di produzione (bloccante)
         run: npm run audit:prod
 
+      - name: Genera SBOM CycloneDX
+        run: npm run sbom
+
       - name: Report dipendenze toolchain (informativo)
         continue-on-error: true
         run: npm audit --omit=prod --audit-level=high
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: sbom-cyclonedx-security
+          path: sbom.cdx.json
+          retention-days: 30
 
   codeql:
     name: CodeQL security scan

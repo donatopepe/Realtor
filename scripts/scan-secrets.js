@@ -23,6 +23,19 @@ import { basename } from 'node:path';
 /** File che contengono i pattern per definizione: esclusi dalla scansione. */
 export const IGNORED_FILES = new Set(['scan-secrets.js', 'secrets.test.js']);
 
+/**
+ * Fixture sintetiche esatte, usate dai test per verificare cifratura e logging.
+ * Allowlist volutamente puntuale (non pattern): nessun valore reale è ammesso.
+ */
+const SAFE_TEST_FIXTURES = new Set([
+  'password-di-test-123',
+  'token-segreto-di-test-123',
+  'Bearer token-segreto-di-test-123',
+  "'Bearer token-segreto-di-test'",
+  "'Bearer token-segreto-di-test-123'",
+  '"Bearer token-segreto-di-test-123"',
+]);
+
 /** Valori evidentemente fittizi: non sono segreti. */
 const PLACEHOLDER = /^(?:\$[A-Za-z_{]|\{\{|<|%|x{3,}|\.{3,}|-+|change|cambia|modifica|inserisci|inserire|segnaposto|replace|example|placeholder|your|test|dummy|fake|sample|todo|redacted|secret$|password$|token$|api[_-]?key$|access[_-]?token$)/i;
 
@@ -127,6 +140,7 @@ export function scanText(content, { file = '<testo>' } = {}) {
       const match = pattern.regex.exec(line);
       if (!match) continue;
       const captured = match[1];
+      if (SAFE_TEST_FIXTURES.has(captured || match[0])) continue;
       if (captured && PLACEHOLDER.test(captured)) continue;
       // Evita di segnalare l'uso di variabili d'ambiente come fonte del valore.
       if (match[0] && /process\.env|import\.meta\.env/.test(line)) continue;
