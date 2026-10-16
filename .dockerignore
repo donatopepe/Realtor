@@ -1,0 +1,20 @@
+# Contesto di build minimo per l'immagine dell'API.
+.git
+.gitattributes
+.github
+node_modules
+coverage
+playwright-report
+test-results
+platforms
+plugins
+data
+resources
+scripts
+tests
+docs
+*.md
+*.apk
+*.keystore
+*.jks
+001014428tesi.pdf
