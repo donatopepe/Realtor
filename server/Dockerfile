@@ -5,7 +5,7 @@
 #
 # L'immagine contiene solo il server e lo schema condiviso con l'app: nessuna
 # dipendenza runtime da installare.
-FROM node:22-alpine
+FROM node:25-alpine
 
 ENV NODE_ENV=production \
     PORT=3000 \
