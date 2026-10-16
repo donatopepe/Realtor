@@ -53,5 +53,8 @@
     "build:ios": "cordova build ios",
     "build:browser": "cordova build browser",
     "build:web": "cordova build browser"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.64.1"
   }
 }

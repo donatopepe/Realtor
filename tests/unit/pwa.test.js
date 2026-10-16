@@ -145,3 +145,35 @@ test('il manifest non referenzia asset inesistenti', () => {
     assert.ok(statSync(join(www, icon)).isFile(), `icona non trovata: ${icon}`);
   }
 });
+
+test('service worker: app shell completa e strategia conservativa', () => {
+  const source = readFileSync(join(www, 'sw.js'), 'utf8');
+
+  // Tutti i file dell'app shell devono esistere davvero.
+  const shell = [...source.matchAll(/'(\.[^']*)'/g)].map((match) => match[1]);
+  assert.ok(shell.length >= 10, `app shell troppo corta: ${shell.length} voci`);
+  for (const entry of shell) {
+    const relative = entry.replace(/^\.\//, '') || 'index.html';
+    assert.ok(statSync(join(www, relative)).isFile(), `file dell'app shell mancante: ${entry}`);
+  }
+
+  // Non intercetta POST (invio schede) né richieste verso l'API dell'utente.
+  assert.match(source, /request\.method !== 'GET'/);
+  assert.match(source, /url\.origin !== self\.location\.origin/);
+  assert.match(source, /caches\.delete\(key\)/);
+});
+
+test('l’app registra il service worker solo su http/https', () => {
+  const source = readFileSync(join(www, 'js/app.js'), 'utf8');
+  assert.match(source, /serviceWorker\.register\('sw\.js'\)/);
+  assert.match(source, /\^https\?\$|https\?:/);
+});
+
+test('gli screenshot per la documentazione esistono', () => {
+  for (const name of ['home.png', 'scheda.png', 'elenco.png', 'impostazioni.png']) {
+    const file = join(root, 'docs', 'screenshots', name);
+    assert.ok(statSync(file).isFile(), `screenshot mancante: ${name}`);
+    const { width, height } = pngSize(file);
+    assert.ok(width >= 600 && height >= 400, `screenshot troppo piccolo: ${name}`);
+  }
+});

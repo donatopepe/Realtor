@@ -4,6 +4,7 @@ node_modules/
 # Test / coverage / e2e output
 coverage/
 playwright-report/
+blob-report/
 test-results/
 .jest-cache/
 
