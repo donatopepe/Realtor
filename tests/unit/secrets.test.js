@@ -75,6 +75,20 @@ test('non segnala placeholder, documentazione o variabili d’ambiente', () => {
   }
 });
 
+test('non segnala password di keystore prese da variabili d’ambiente o segnaposto', () => {
+  const safe = [
+    'storePassword=$ANDROID_STORE_PASSWORD',
+    'keyPassword=$ANDROID_KEY_PASSWORD',
+    'storePassword=...',
+    'keyPassword=xxxxxxxx',
+    'storePassword=CHANGE_ME',
+  ];
+  for (const line of safe) {
+    assert.deepEqual(scanText(line), [], `falso positivo su: ${line}`);
+  }
+  assert.ok(scanText('storePassword=S3gr3t0').some((f) => f.pattern === 'keystore-password'));
+});
+
 test('redact non mostra mai il valore completo', () => {
   const redacted = redact('S3cr3t-di-produzione');
   assert.ok(redacted.startsWith('S3cr'));

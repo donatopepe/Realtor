@@ -45,7 +45,7 @@
     "scan:secrets": "node scripts/scan-secrets.js",
     "scan:secrets:history": "node scripts/scan-secrets.js --history",
     "prepare:android": "cordova platform add android",
-    "prepare:ios": "cordova platform add ios",
+    "prepare:ios": "node scripts/ios-prepare.js",
     "prepare:electron": "cordova platform add electron",
     "build:android": "cordova build android",
     "build:android:release": "cordova build android --release",
