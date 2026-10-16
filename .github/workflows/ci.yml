@@ -1,0 +1,149 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  NODE_VERSION: '22'
+
+jobs:
+  quality:
+    name: Lint, segreti, documentazione, test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # la scansione dei segreti controlla anche la storia
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - run: npm ci
+
+      - name: Stile del codice
+        run: npm run lint
+
+      - name: Nessun segreto in working tree e storia
+        run: npm run scan:secrets:history
+
+      - name: Documentazione coerente
+        run: npm run docs:check
+
+      - name: Test unitari e di integrazione
+        run: npm test
+
+  e2e:
+    name: End-to-end (desktop + mobile)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - run: npm ci
+
+      - name: Installa Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Test end-to-end
+        run: npm run test:e2e
+
+      - name: Report Playwright
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report
+          retention-days: 7
+
+  android:
+    name: Build Android (APK)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: android-actions/setup-android@v3
+
+      - name: Installa piattaforma e build-tools
+        run: sdkmanager --install "platform-tools" "platforms;android-36" "build-tools;36.0.0"
+
+      - run: npm ci
+
+      - name: Aggiungi la piattaforma Cordova
+        run: npx cordova platform add android
+
+      - name: Compila l'APK di debug
+        run: npx cordova build android --debug
+
+      - name: Verifica l'APK
+        run: |
+          APK=$(find platforms/android/app/build/outputs/apk/debug -name '*.apk' | head -1)
+          test -n "$APK"
+          ls -lh "$APK"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: realtor-apk-debug
+          path: platforms/android/app/build/outputs/apk/debug/*.apk
+          retention-days: 14
+
+  ios:
+    name: Build iOS (simulatore)
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - run: npm ci
+
+      - name: Aggiungi la piattaforma Cordova
+        run: npx cordova platform add ios
+
+      - name: Compila per il simulatore (senza firma)
+        run: npx cordova build ios --emulator --debug
+
+  docker:
+    name: Immagine Docker del server
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build dell'immagine
+        run: docker build -f server/Dockerfile -t realtor-api:ci .
+
+      - name: Avvio e health check
+        run: |
+          docker run -d --name realtor-api-ci -p 3000:3000 realtor-api:ci
+          for attempt in $(seq 1 20); do
+            if curl -fsS http://127.0.0.1:3000/health; then break; fi
+            sleep 1
+          done
+          curl -fsS -X POST http://127.0.0.1:3000/realtor/api/scheda \
+            -H 'Content-Type: application/json' \
+            -d '{"nome":"Scheda CI","prezzo":"1.000,50"}'
+          docker rm -f realtor-api-ci

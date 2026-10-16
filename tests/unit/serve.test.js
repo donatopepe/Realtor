@@ -3,7 +3,7 @@
  */
 
 import assert from 'node:assert/strict';
-import { after, before, test } from 'node:test';
+import { test } from 'node:test';
 
 import { MIME_TYPES, CORDOVA_SHIM, createStaticServer, mimeFor, localAddresses } from '../../scripts/serve.js';
 

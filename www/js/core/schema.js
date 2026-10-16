@@ -41,6 +41,8 @@ export function normalizeField(value) {
   if (typeof value === 'number' && Number.isFinite(value)) return String(value);
   if (typeof value !== 'string') return '';
   return value
+    // Rimozione dei caratteri di controllo (voluta): il campo diventa testo pulito.
+    // eslint-disable-next-line no-control-regex
     .replace(/[\u0000-\u001f\u007f]/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();

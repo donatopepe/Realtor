@@ -1,0 +1,120 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  NODE_VERSION: '22'
+
+jobs:
+  package-web:
+    name: Pacchetto web/PWA
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Crea l'archivio di www/
+        run: |
+          mkdir -p dist
+          (cd www && zip -qr "../dist/realtor-web-${GITHUB_REF_NAME}.zip" .)
+          ls -lh dist
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: web-package
+          path: dist/*.zip
+          retention-days: 30
+
+  package-android:
+    name: APK Android
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: android-actions/setup-android@v3
+
+      - name: Installa piattaforma e build-tools
+        run: sdkmanager --install "platform-tools" "platforms;android-36" "build-tools;36.0.0"
+
+      - run: npm ci
+
+      - name: Aggiungi la piattaforma Cordova
+        run: npx cordova platform add android
+
+      - name: APK di release firmato (se i segreti sono configurati)
+        id: signed
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          if [ -z "$ANDROID_KEYSTORE_BASE64" ]; then
+            echo "Nessun keystore configurato: salto la build firmata."
+            echo "signed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "$ANDROID_KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.keystore"
+          cat > platforms/android/release-signing.properties <<EOF
+          storeFile=$RUNNER_TEMP/release.keystore
+          storePassword=$ANDROID_STORE_PASSWORD
+          keyAlias=$ANDROID_KEY_ALIAS
+          keyPassword=$ANDROID_KEY_PASSWORD
+          EOF
+          npx cordova build android --release
+          echo "signed=true" >> "$GITHUB_OUTPUT"
+
+      - name: APK di debug come fallback
+        if: steps.signed.outputs.signed != 'true'
+        run: npx cordova build android --debug
+
+      - name: Raccogli gli APK
+        run: |
+          mkdir -p dist
+          find platforms/android/app/build/outputs -name '*.apk' -exec cp {} dist/ \;
+          ls -lh dist
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android-apk
+          path: dist/*.apk
+          retention-days: 30
+
+  publish:
+    name: GitHub Release
+    needs: [package-web, package-android]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+
+      - name: Pubblica la release con gli artefatti
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: |
+            dist/web-package/*.zip
+            dist/android-apk/*.apk
+          body: |
+            Realtor ${{ github.ref_name }}
+
+            - `realtor-web-*.zip`: build web/PWA (contenuto di `www/`, da servire in HTTPS).
+            - `*.apk`: app Android (firmata se i segreti di firma sono configurati, altrimenti debug).
+
+            Dettagli di installazione e pubblicazione in `docs/PUBLISHING.md`.
