@@ -40,6 +40,8 @@
     "server": "node server/src/server.js",
     "server:test": "node --test server/test/",
     "docs:check": "node scripts/docs-check.js",
+    "scan:secrets": "node scripts/scan-secrets.js",
+    "scan:secrets:history": "node scripts/scan-secrets.js --history",
     "prepare:android": "cordova platform add android",
     "prepare:ios": "cordova platform add ios",
     "prepare:browser": "cordova platform add browser",

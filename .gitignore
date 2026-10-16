@@ -46,4 +46,20 @@ npm-debug.log*
 # Secrets and personal data (never published)
 .env
 .env.*
+*.pem
+*.p12
+*.pfx
+*.key
+*.keystore
+*.jks
+*.mobileprovision
+key.properties
+google-services.json
+GoogleService-Info.plist
+gcloud-key.json
+*.npmrc
+.npmrc
+.netrc
+id_rsa
+id_ed25519
 001014428tesi.pdf
