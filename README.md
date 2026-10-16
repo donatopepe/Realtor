@@ -35,11 +35,11 @@ endpoint REST configurato dall'utente e server di riferimento incluso.
 
 | Ambito | Requisiti |
 |--------|-----------|
-| Web/PWA | Node.js >= 20 (verificato con 26), un browser moderno |
+| Web/PWA | Node.js >= 22 (verificato con 26), un browser moderno |
 | Test end-to-end | Chromium scaricato da Playwright (`npx playwright install chromium`) |
 | Android | JDK 17, Android SDK (platform + build-tools 36) con `ANDROID_HOME` esportato |
 | iOS | macOS con Xcode (la compilazione non è possibile su Linux/Windows) |
-| Server/Docker | Node.js >= 20 oppure Docker |
+| Server/Docker | Node.js >= 22 oppure Docker |
 | Icone | bash + ImageMagick (solo per rigenerare le icone) |
 
 ## Avvio rapido
