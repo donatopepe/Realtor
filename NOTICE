@@ -1,0 +1,25 @@
+Realtor
+Copyright (c) 2014-2026 Donato Pepe
+
+This product is licensed under the MIT License (see the LICENSE file).
+
+--------------------------------------------------------------------------
+Third-party and derived material
+--------------------------------------------------------------------------
+
+1) Apache Cordova application template
+   Files originally generated from the Apache Cordova "Hello World" template
+   (www/index.html, www/js/index.js -> www/js/app.js, hooks/README.md,
+   platforms/, plugins/ generated scaffolding):
+     Copyright 2012-2014 The Apache Software Foundation
+     Licensed under the Apache License, Version 2.0
+     http://www.apache.org/licenses/LICENSE-2.0
+
+2) jQuery 2.1.0 and jQuery Mobile 1.4.2 (www/js/jquery/)
+     Copyright OpenJS Foundation and other contributors
+     Released under the MIT License
+     https://jquery.org/license/
+
+3) Apache Cordova Android platform and Cordova plugins
+   Not vendored in this repository: they are resolved at build time through
+   package.json / config.xml and keep their own Apache-2.0 license.

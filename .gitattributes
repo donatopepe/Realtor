@@ -1,0 +1,28 @@
+# Normalize line endings to LF in the repository, native on checkout-free CI.
+* text=auto eol=lf
+
+# Binary assets (never normalize / diff)
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.webp binary
+*.pdf binary
+*.apk binary
+*.aab binary
+*.jar binary
+*.class binary
+*.keystore binary
+*.jks binary
+*.zip binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.eot binary
+*.mp3 binary
+*.mp4 binary
+
+# Minified third-party assets: keep as-is, no diffs
+www/js/jquery/*.min.js -diff
+www/js/jquery/*.min.css -diff
