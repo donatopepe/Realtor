@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-10-16
+
+Prima versione pubblicabile: stessa app della 0.0.1, riscritta per funzionare su
+web/PWA, Android e iOS con test, documentazione e licenza MIT.
+
 ### Added
 
 - Offline-first card storage with an injectable repository layer.
