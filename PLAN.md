@@ -14,7 +14,7 @@
 | D2 | Prompt ingegnerizzato | ✅ fatto | `docs/ENGINEERED-PROMPT.md` |
 | D3 | Piano in un file | ✅ fatto | questo file |
 | D4 | Loop di lavorazione | ✅ creato (cron durable) | task `realtor-modernizzazione` |
-| D5 | Progetto corretto, testato, documentato, MIT, distribuibile | ⏳ in corso — M0 ✅, AC 2/15 | milestone M0→M7 |
+| D5 | Progetto corretto, testato, documentato, MIT, distribuibile | ⏳ in corso — M0, M1 ✅, AC 5/15 | milestone M0→M7 |
 
 ---
 
@@ -42,6 +42,18 @@ Risultato baseline: **impossibile eseguire** (nessun `package.json`; Cordova CLI
 Punteggio baseline: **AC soddisfatti = 0 / 15** (rapporto 0.00).
 
 Ambiente verificato: Node `v26.11.1`, npm `12.2.0`, Java 17 + 27, `gradle` di sistema, Android SDK `/opt/android-sdk` (platforms `android-36`, build-tools `36.x`), rete OK, `gh` autenticato come `donatopepe` (token presente → push possibile), repo remoto `https://github.com/donatopepe/Realtor.git` **pubblico**.
+
+---
+
+### Rilievi aggiuntivi emersi durante M1
+
+| # | Rilievo | Impatto |
+|---|---------|---------|
+| 11 | `app.receivedEvent('deviceready')` leggeva `#deviceready`, elemento rimosso dal markup: eccezione a ogni `deviceready` | Codice morto che lanciava un errore a ogni avvio |
+| 12 | Il nome della scheda era interpolato in una stringa HTML nella listview (`"<li>…" + chiave + …`) | Markup rotto o iniezione con nomi contenenti `<`, `&`, apici |
+| 13 | `<input type="number">` per il prezzo: i browser rifiutano `150.000,50` | Impossibile inserire prezzi nel formato italiano |
+| 14 | `$.mobile.allowCrossDomainPages` impostato dopo il caricamento di jQuery Mobile | Opzione inefficace (va impostata su `mobileinit`) |
+| 15 | Il form non veniva azzerato aprendo "Nuova scheda" dopo aver visto una scheda esistente | Nuova scheda creata con dati di un'altra |
 
 ---
 
@@ -112,7 +124,7 @@ Principi: logica core pura e iniettabile → testabile in Node senza device; `ww
 | M | Contenuto | Gate (comando) | AC | Stato |
 |---|-----------|----------------|-----|-------|
 | M0 | Igiene repo: `.gitignore`, `.gitattributes` (LF), untrack `platforms/ plugins/` e `001014428tesi.pdf` (file locale conservato), normalizzazione mode, `package.json`, `LICENSE` MIT, `NOTICE`, `CHANGELOG.md`, README scheletro, rimozione `.bat` legacy | `git ls-files \| wc -l` ≤ 260, `LICENSE` MIT, `npm ci` ok | AC-12, AC-13 | ✅ 2026-10-16 |
-| M1 | Fix encoding UTF-8, estrazione core in ES module senza cambio di comportamento, setup vitest + primo giro di test | `npm test` verde, `grep FFFD` = 0 | AC-01, AC-04, AC-14 |
+| M1 | Fix encoding UTF-8, estrazione core in ES module, setup dei test e primo giro verde (deviazioni: `node:test` al posto di vitest, zero dipendenze; prefisso chiavi `realtor.scheda.`; fix di perdita dati anticipato dal M2 perché non era difendibile mantenere il bug) | `npm test` verde, `grep FFFD` = 0 | AC-01, AC-04, AC-14 | ✅ 2026-10-16 |
 | M2 | Fix funzionali: validazione/schema, invio senza data loss, POST JSON corretto, pagina Impostazioni con URL API e modalità offline, export/import backup, fallback web platform | `npm test` verde | AC-06, AC-07, AC-08, AC-09 |
 | M3 | Server di riferimento + test integration + Dockerfile + `docs/API.md` | `npm run server:test` verde | AC-10 |
 | M4 | E2E Playwright (≥6 scenari) + PWA manifest + screenshot per README | `npm run test:e2e` verde | AC-03, AC-06 |
@@ -153,6 +165,7 @@ Regola di gate: un milestone è ✅ solo con output grezzo dei comandi registrat
 |------|---|--------------|-------|------|
 | 2026-10-16 | — | audit read-only + `npm`/`cordova build` baseline | ❌ 0/15 AC | baseline registrata in §2 |
 | 2026-10-16 | M0 | `git ls-files \| wc -l` (≤260); `head -1 LICENSE`; `node -p require('./package.json').license`; `git ls-files \| grep -Ec "^(platforms\|plugins\|node_modules)/"`; `npm ci`; `git status --porcelain` | ✅ **DONE** | 235 file tracciati; `MIT License`; licenza `MIT`; 0 artefatti; 0 pdf; `npm ci` ok (0 vulnerabilità); working tree pulito. Commit `M0: igiene repo, licenza MIT, package.json e rimozione artefatti`. AC ✅: AC-12, AC-13 (**2/15**) |
+| 2026-10-16 | M1 | `npm test`; `git ls-files -z '*.js' '*.html' '*.md' '*.json' '*.xml' \| xargs -0 grep -l $'\uFFFD' \| wc -l`; `grep -Rn "jquery\|cordova\|window.localStorage" www/js/core \| wc -l`; `npm run test:coverage`; `grep -Rn "realtor.dntppe.net" www/ \| wc -l` | ✅ **DONE** | 51 test passati, 0 falliti; 0 caratteri U+FFFD; 0 violazioni di purezza nel core; coverage core: schema 100%, storage 100%, api 96.67%, platform 97.03% (soglia 80%); 0 endpoint hardcoded. Commit `M1: core testabile in ES module, fix encoding UTF-8 e 51 test verdi`. AC ✅: AC-01, AC-04, AC-14 (**5/15**) |
 
 ---
 
