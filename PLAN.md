@@ -14,7 +14,8 @@
 | D2 | Prompt ingegnerizzato | ✅ fatto | `docs/ENGINEERED-PROMPT.md` |
 | D3 | Piano in un file | ✅ fatto | questo file |
 | D4 | Loop di lavorazione | ✅ creato (cron durable) | task `realtor-modernizzazione` |
-| D5 | Progetto corretto, testato, documentato, MIT, distribuibile | ⏳ in corso — M0, M1 ✅, AC 5/15 | milestone M0→M7 |
+| D5 | Progetto corretto, testato, documentato, MIT, distribuibile | ⏳ in corso — M0, M1, M2 ✅, AC 10/21 | milestone M0→M8 |
+| D6 | Cross-platform: stesso sorgente per **Android, iOS, web/PWA** (desktop Electron opzionale) | ✅ fondamenta (M2); build per piattaforma in M6 | `www/`, `config.xml`, `resources/`, `scripts/serve.js` |
 
 ---
 
@@ -55,14 +56,22 @@ Ambiente verificato: Node `v26.11.1`, npm `12.2.0`, Java 17 + 27, `gradle` di si
 | 14 | `$.mobile.allowCrossDomainPages` impostato dopo il caricamento di jQuery Mobile | Opzione inefficace (va impostata su `mobileinit`) |
 | 15 | Il form non veniva azzerato aprendo "Nuova scheda" dopo aver visto una scheda esistente | Nuova scheda creata con dati di un'altra |
 
+### Rilievi cross-platform (emersi durante M2)
+
+| # | Rilievo | Impatto |
+|---|---------|---------|
+| 16 | Progetto di fatto solo Android: `config.xml` senza blocchi `ios`/`browser`, nessun asset iOS, nessun manifest PWA | Non distribuibile fuori da Android |
+| 17 | `navigator.app.exitApp` e `notification.confirm` senza verifica di disponibilità; `window.close()` su web | Su iOS il pulsante di uscita non fa nulla; pulsanti non disabilitabili |
+| 18 | CSS del template con `user-select:none` globale (bloccava l'editing dei campi su iOS) e regole morte (`.app`, `.event`, `.blink`) | UX rotta su iOS, peso inutile |
+
 ---
 
 ## 3. Obiettivo e metrica (gate unico)
 
-**Obiettivo (una frase):** rendere Realtor un progetto Cordova+PWA moderno, offline-first, senza perdita di dati, con API configurabile e server di riferimento, coperto da test automatici, documentato e rilasciabile con licenza MIT.
+**Obiettivo (una frase):** rendere Realtor un progetto **cross-platform** (Android, iOS, web/PWA) moderno, offline-first, senza perdita di dati, con API configurabile e server di riferimento, coperto da test automatici, documentato e rilasciabile con licenza MIT.
 
-**Metrica:** rapporto criteri di accettazione soddisfatti / criteri totali (`AC pass ratio`).
-**Soglia:** ≥ **0.95** con **AC-01…AC-12 obbligatori** (hard gate: se uno è rosso il progetto non è "funzionante").
+**Metrica:** rapporto criteri di accettazione soddisfatti / criteri totali (`AC pass ratio`, 21 criteri).
+**Soglia:** ≥ **0.95** (≥ 20/21) con **AC-01…AC-12 obbligatori** (hard gate: se uno è rosso il progetto non è "funzionante").
 Nessun criterio può essere marcato ✅ senza comando di verifica eseguito e output registrato in §9.
 
 Criteri qualitativi di D5 (rubrica 0/1, prima del primo tentativo): funzionamento, test, documentazione, licenza, igiene repo, distribuibilità — tutti obbligatori.
@@ -88,34 +97,42 @@ Criteri qualitativi di D5 (rubrica 0/1, prima del primo tentativo): funzionament
 | AC-13 | Igiene repo (nessun artefatto tracciato) | `git ls-files \| grep -Ec "^(platforms\|plugins\|node_modules)/"` = 0 e nessun `*.pdf` di tesi |
 | AC-14 | Nessun carattere corrotto | `git ls-files -z '*.js' '*.html' '*.md' '*.json' '*.xml' \| xargs -0 grep -l $'\uFFFD' \| wc -l` = 0 |
 | AC-15 | CI verde sul remoto (post-push) | `gh run list --limit 1` = success |
+| AC-16 | Web/PWA utilizzabile da `npm run serve`: manifest valido, icone reali, meta di installazione | `npm test` (`pwa.test.js`) + `curl` su `/`, `/manifest.webmanifest`, `/img/icon-192.png` |
+| AC-17 | Codice dell'app platform-agnostico: nessuna logica Android/iOS fuori dall'adapter | `npm test` (`pwa.test.js`) |
+| AC-18 | `config.xml` dichiara `android` + `ios` + `browser` con icone native esistenti e valide | `npm test` (`pwa.test.js`) |
+| AC-19 | Notifiche, stato rete e uscita funzionano su ogni piattaforma (fallback web, `canExit`) | `npm test` (`platform.test.js`) |
+| AC-20 | `npm run serve`: MIME corretti (incl. `.webmanifest`), shim `cordova.js`, fallback SPA, path traversal bloccato | `npm test` (`serve.test.js`) |
+| AC-21 | CI multi-piattaforma: `ubuntu` (Android + web) e `macos` (iOS) verdi | `gh run list --limit 2` = success |
 
 ---
 
 ## 5. Architettura target
 
 ```
-www/
-  index.html            UI jQuery Mobile (pagine: home, scheda, elenco, impostazioni, info)
-  css/index.css
+www/                     unico sorgente per Android, iOS, browser/PWA
+  index.html             UI jQuery Mobile (pagine: home, scheda, elenco, impostazioni, info)
+  manifest.webmanifest   PWA installabile (Android, iOS, desktop)
+  img/icon-*.png         icone web/maskable/favicon/apple-touch
+  css/index.css          stili base condivisi (+ safe area iOS, campi editabili)
   js/core/storage.js     Repository schede su storage iniettabile (no jQuery, no Cordova)
   js/core/schema.js      validazione/normalizzazione/versioning scheda
-  js/core/api.js         client fetch iniettabile, base URL configurabile, timeout/retry
-  js/core/backup.js      export/import JSON (round-trip testato)
-  js/core/migration.js   import formato legacy 0.0.1
-  js/platform.js         adapter notification/network/exit con fallback web
+  js/core/api.js         client fetch iniettabile, base URL configurabile, timeout
+  js/core/backup.js      export/import JSON (round-trip testato)   [M3]
+  js/core/migration.js   import formato legacy 0.0.1             [M3]
+  js/platform.js         adapter notification/network/exit + canExit/platformName (fallback web)
   js/app.js              glue UI (unico punto che tocca jQuery Mobile)
-  manifest.webmanifest   PWA installabile
-server/                  API di riferimento Node (zero dipendenze runtime)
-  src/server.js          GET/POST /realtor/api/scheda, GET /health, CORS
-  src/store.js           persistenza JSON con scrittura atomica
-  test/*.test.js         integration via fetch reale su porta effimera
-  Dockerfile
-tests/                   vitest (unit/integration) + playwright (e2e) + fixtures
+resources/android/       icone per densità (generate)
+resources/ios/           set icone iOS (generato)
+scripts/make-icons.sh    generatore riproducibile delle icone da www/img/logo.png
+scripts/serve.js         server statico di sviluppo (MIME, shim cordova.js, fallback SPA)
+config.xml               Cordova multi-piattaforma: android + ios + browser (+ electron opzionale)
+server/                  API di riferimento Node (zero dipendenze runtime)  [M4]
+tests/                   node:test (unit) + Playwright (e2e)                 [M5 per e2e]
 docs/                    ENGINEERED-PROMPT.md, ARCHITECTURE.md, API.md, PUBLISHING.md, MIGRATION.md
-.github/workflows/       ci.yml (lint+test+e2e+build android), release.yml (tag v* → APK)
+.github/workflows/       ci.yml (ubuntu: lint+test+web+android; macos: ios), release.yml      [M6/M7]
 ```
 
-Principi: logica core pura e iniettabile → testabile in Node senza device; `www/` unica fonte per PWA e APK; nessun segreto nel repo (solo debug signing, keystore documentato e ignorato).
+Principi: logica core pura e iniettabile → testabile in Node senza device; `www/` unica fonte per PWA, APK e app iOS; nessun ramo per piattaforma (solo feature detection in `platform.js`); nessun segreto nel repo (solo debug signing, keystore documentato e ignorato).
 
 ---
 
@@ -125,12 +142,13 @@ Principi: logica core pura e iniettabile → testabile in Node senza device; `ww
 |---|-----------|----------------|-----|-------|
 | M0 | Igiene repo: `.gitignore`, `.gitattributes` (LF), untrack `platforms/ plugins/` e `001014428tesi.pdf` (file locale conservato), normalizzazione mode, `package.json`, `LICENSE` MIT, `NOTICE`, `CHANGELOG.md`, README scheletro, rimozione `.bat` legacy | `git ls-files \| wc -l` ≤ 260, `LICENSE` MIT, `npm ci` ok | AC-12, AC-13 | ✅ 2026-10-16 |
 | M1 | Fix encoding UTF-8, estrazione core in ES module, setup dei test e primo giro verde (deviazioni: `node:test` al posto di vitest, zero dipendenze; prefisso chiavi `realtor.scheda.`; fix di perdita dati anticipato dal M2 perché non era difendibile mantenere il bug) | `npm test` verde, `grep FFFD` = 0 | AC-01, AC-04, AC-14 | ✅ 2026-10-16 |
-| M2 | Fix funzionali: validazione/schema, invio senza data loss, POST JSON corretto, pagina Impostazioni con URL API e modalità offline, export/import backup, fallback web platform | `npm test` verde | AC-06, AC-07, AC-08, AC-09 |
-| M3 | Server di riferimento + test integration + Dockerfile + `docs/API.md` | `npm run server:test` verde | AC-10 |
-| M4 | E2E Playwright (≥6 scenari) + PWA manifest + screenshot per README | `npm run test:e2e` verde | AC-03, AC-06 |
-| M5 | Cordova moderno: `cordova-android@^14`, `config.xml` (id `net.dntppe.realtor`, v1.0.0, engine+plugin dichiarati, preference, minSdk/targetSdk), platform ricreato, plugin ridotti ai soli usati, build APK | `npx cordova build android` → APK | AC-05 |
-| M6 | Documentazione completa (README EN + quick start IT, ARCHITECTURE, MIGRATION, PUBLISHING, CONTRIBUTING, SECURITY, CODE_OF_CONDUCT) + lint + CI | `npm run lint` verde, `npm run docs:check` verde | AC-02, AC-11 |
-| M7 | Rilascio: commit, push, tag `v1.0.0`, GitHub Release con APK, CI verde | `gh run list --limit 1` = success | AC-15 | ⏳ |
+| M2 | **Fondamenta cross-platform:** manifest PWA + icone generate da `scripts/make-icons.sh` (PWA, densità Android, set iOS), server statico `scripts/serve.js` (MIME corretti, shim `cordova.js`, fallback SPA, anti-traversal), `config.xml` multi-piattaforma `android`+`ios`+`browser` con icone native, adapter con `canExit`/`platformName`, meta/CSS per iOS e web (safe area, campi editabili), pulizia CSS morto | `npm test` verde (78 test: pwa, serve, platform, core) e `npm run serve` + curl 200/MIME corretti su `/`, `/manifest.webmanifest`, `/cordova.js`, `/img/icon-192.png` | AC-16, AC-17, AC-18, AC-19, AC-20 | ✅ 2026-10-16 |
+| M3 | Fix funzionali: pagina Impostazioni con URL API e modalità offline, invio senza data loss (già in M1), POST JSON, export/import backup, migrazione dati legacy, collegamento configurazione ↔ `app.js` | `npm test` verde | AC-06, AC-07, AC-08, AC-09 | ⏳ |
+| M4 | Server di riferimento (API REST, persistenza JSON atomica, Dockerfile) + test integration + `docs/API.md` | `npm run server:test` verde | AC-10 | ⏳ |
+| M5 | E2E Playwright multi-viewport (mobile/desktop) + service worker per l'uso offline + screenshot per README | `npm run test:e2e` verde | AC-03, AC-06, AC-16, AC-17 | ⏳ |
+| M6 | Cordova multi-piattaforma: `cordova-android@^14` + `cordova-ios@^7` + `cordova-browser` (Electron opzionale), engine/plugin dichiarati in `package.json`, build APK/AAB, progetto iOS avviabile, CI matrix `ubuntu`+`macos` | `npx cordova build android` → APK; `npx cordova build browser`; iOS su runner macOS | AC-05, AC-18, AC-21 | ⏳ |
+| M7 | Documentazione completa (README EN + quick start IT, ARCHITECTURE, MIGRATION, PUBLISHING, matrice piattaforme) + lint + CI | `npm run lint` verde, `npm run docs:check` verde | AC-02, AC-11 | ⏳ |
+| M8 | Rilascio: commit, push, tag `v1.0.0`, GitHub Release con APK e build web, CI verde | `gh run list --limit 1` = success | AC-15, AC-21 | ⏳ |
 
 Regola di gate: un milestone è ✅ solo con output grezzo dei comandi registrato in §9.
 
@@ -138,7 +156,7 @@ Regola di gate: un milestone è ✅ solo con output grezzo dei comandi registrat
 
 ## 7. Regole di esecuzione (per il loop)
 
-1. Un solo milestone aperto per volta, nell'ordine M0→M7; continuare quello eventualmente in corso prima di aprirne un altro.
+1. Un solo milestone aperto per volta, nell'ordine M0→M8; continuare quello eventualmente in corso prima di aprirne un altro.
 2. Una variabile nominata per iterazione; nessun refactor decorativo.
 3. Massimo 3 tentativi per gate; poi stato `BLOCKED` con errore esatto e fallback documentato.
 4. Ogni iterazione: eseguire il gate, aggiornare §9 (data, milestone, comando, esito, output), scrivere evidenza in `/home/public/HermesVault/Inbox/<timestamp>-realtor-loop.md`.
@@ -156,6 +174,10 @@ Regola di gate: un milestone è ✅ solo con output grezzo dei comandi registrat
 | Ant/gradle offline o download lungo | build in background con timeout, log su file, ripresa all'iterazione successiva |
 | Push GitHub | `gh` autenticato: push consentito; se il push fallisce, M7 BLOCKED con errore e worktree committato localmente |
 | Perdita dati utente durante la migrazione | backup automatico `localStorage` esportato prima di ogni migrazione |
+| Build iOS impossibile su questa macchina (serve macOS + Xcode) | progetto iOS e CI su runner `macos` (M6); in locale si verifica solo `config.xml`/asset, non la compilazione |
+| SDK Android: presente solo `android-36`, il target dichiarato è 35 | `sdkmanager "platforms;android-35"` in M6, oppure allineamento a 36 se supportato da `cordova-android` |
+| `scripts/make-icons.sh` richiede bash + ImageMagick | le icone generate sono versionate: lo script serve solo a rigenerarle; su Windows usare WSL/Git Bash |
+| Service worker e cache PWA possono servire versioni vecchie | strategia network-first con versione di cache e test in M5 |
 
 ---
 
@@ -166,6 +188,7 @@ Regola di gate: un milestone è ✅ solo con output grezzo dei comandi registrat
 | 2026-10-16 | — | audit read-only + `npm`/`cordova build` baseline | ❌ 0/15 AC | baseline registrata in §2 |
 | 2026-10-16 | M0 | `git ls-files \| wc -l` (≤260); `head -1 LICENSE`; `node -p require('./package.json').license`; `git ls-files \| grep -Ec "^(platforms\|plugins\|node_modules)/"`; `npm ci`; `git status --porcelain` | ✅ **DONE** | 235 file tracciati; `MIT License`; licenza `MIT`; 0 artefatti; 0 pdf; `npm ci` ok (0 vulnerabilità); working tree pulito. Commit `M0: igiene repo, licenza MIT, package.json e rimozione artefatti`. AC ✅: AC-12, AC-13 (**2/15**) |
 | 2026-10-16 | M1 | `npm test`; `git ls-files -z '*.js' '*.html' '*.md' '*.json' '*.xml' \| xargs -0 grep -l $'\uFFFD' \| wc -l`; `grep -Rn "jquery\|cordova\|window.localStorage" www/js/core \| wc -l`; `npm run test:coverage`; `grep -Rn "realtor.dntppe.net" www/ \| wc -l` | ✅ **DONE** | 51 test passati, 0 falliti; 0 caratteri U+FFFD; 0 violazioni di purezza nel core; coverage core: schema 100%, storage 100%, api 96.67%, platform 97.03% (soglia 80%); 0 endpoint hardcoded. Commit `M1: core testabile in ES module, fix encoding UTF-8 e 51 test verdi`. AC ✅: AC-01, AC-04, AC-14 (**5/15**) |
+| 2026-10-16 | M2 | `npm test` (78 test); `npm run serve` + `curl -w "%{http_code} %{content_type}"` su `/`, `/manifest.webmanifest`, `/cordova.js`, `/img/icon-192.png`, `/css/index.css`, `/js/app.js`, `/route/inesistente` | ✅ **DONE** | 78 test passati, 0 falliti (pwa, serve, platform, core); tutte le route 200 con MIME corretti (`text/html`, `application/manifest+json`, `text/javascript`, `image/png`, `text/css`) e fallback SPA; manifest valido (`Realtor — Schede immobiliari`, display standalone, 3 icone); icone native generate per 6 densità Android e 15 voci iOS; `config.xml` multi-piattaforma. AC ✅: AC-16, AC-17, AC-18, AC-19, AC-20 (**10/21**) |
 
 ---
 
@@ -178,3 +201,9 @@ Regola di gate: un milestone è ✅ solo con output grezzo dei comandi registrat
 - **D-05** `001014428tesi.pdf` rimosso dal versionamento (file locale conservato) e aggiunto a `.gitignore`: non pertinente, contiene dato personale.
 - **D-06** Licenza MIT (c) 2014-2026 Donato Pepe; `NOTICE` conserva l'attribuzione dei template Apache-2.0 della Apache Software Foundation.
 - **D-07** `platforms/` e `plugins/` non più tracciati: rigenerabili con `npm run prepare:android`.
+- **D-08** Un solo sorgente (`www/`) per tutte le piattaforme: PWA/web come caso base, Cordova come packaging per Android e iOS. Nessun fork per piattaforma.
+- **D-09** Nessun ramo condizionale per piattaforma nel codice dell'app: solo feature detection, isolata in `www/js/platform.js` (`canExit`, `platformName`).
+- **D-10** L'uscita dall'app è offerta solo dove la piattaforma la consente (Android): altrove il pulsante è nascosto.
+- **D-11** Identità app unificata: `net.dntppe.realtor`, versione `1.0.0` in `config.xml` e `package.json` (mai pubblicata prima, quindi nessuna migrazione di store).
+- **D-12** Icone e asset nativi **generati** da `www/img/logo.png` con `scripts/make-icons.sh` e versionati (riproducibili, nessun editor grafico richiesto).
+- **D-13** Desktop (Electron) fuori scope per v1.0.0: blocco `config.xml` commentato e script `prepare:electron` pronto.
