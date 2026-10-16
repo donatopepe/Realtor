@@ -1,13 +1,90 @@
 <?xml version='1.0' encoding='utf-8'?>
-<widget id="com.cordova.realtor" version="0.0.1" xmlns="http://www.w3.org/ns/widgets" xmlns:cdv="http://cordova.apache.org/ns/1.0">
+<!--
+  Realtor — configurazione Cordova multi-piattaforma.
+  Lo stesso sorgente in www/ è impacchettato per Android, iOS e browser
+  (ed è utilizzabile anche come PWA senza Cordova).
+  MIT License — Copyright (c) 2014-2026 Donato Pepe (vedi LICENSE).
+-->
+<widget id="net.dntppe.realtor" version="1.0.0" xmlns="http://www.w3.org/ns/widgets" xmlns:cdv="http://cordova.apache.org/ns/1.0">
     <name>Realtor</name>
     <description>
-       Applicazione di statistica e stime immobiliari 
+      Applicazione di statistica e stime immobiliari: gestione offline-first di schede immobiliari.
     </description>
-    <author email="[PRIVATE_EMAIL]" href="http://dntppe.net">
-        Donato Pepe
+    <author email="[PRIVATE_EMAIL]" href="https://github.com/donatopepe">
+      Donato Pepe
     </author>
-    <content src="index.html" />
-    <access origin="http://realtor.dntppe.net" subdomains="true" />
 
+    <content src="index.html" />
+
+    <!-- L'endpoint REST è configurato dall'utente nella pagina Impostazioni. -->
+    <access origin="*" />
+
+    <allow-intent href="http://*/*" />
+    <allow-intent href="https://*/*" />
+    <allow-intent href="tel:*" />
+    <allow-intent href="sms:*" />
+    <allow-intent href="mailto:*" />
+    <allow-intent href="geo:*" />
+
+    <preference name="Orientation" value="portrait" />
+    <preference name="DisallowOverscroll" value="true" />
+    <preference name="Fullscreen" value="false" />
+    <preference name="BackgroundColor" value="0xffe4e4e4" />
+
+    <!-- Android -->
+    <platform name="android">
+        <preference name="AndroidLaunchMode" value="singleTop" />
+        <preference name="android-minSdkVersion" value="24" />
+        <preference name="android-targetSdkVersion" value="35" />
+        <preference name="android-compileSdkVersion" value="35" />
+        <preference name="AndroidXEnabled" value="true" />
+        <preference name="AndroidInsecureFileModeEnabled" value="false" />
+        <preference name="AndroidPersistentFileLocation" value="Internal" />
+        <icon density="ldpi" src="resources/android/icon-ldpi.png" />
+        <icon density="mdpi" src="resources/android/icon-mdpi.png" />
+        <icon density="hdpi" src="resources/android/icon-hdpi.png" />
+        <icon density="xhdpi" src="resources/android/icon-xhdpi.png" />
+        <icon density="xxhdpi" src="resources/android/icon-xxhdpi.png" />
+        <icon density="xxxhdpi" src="resources/android/icon-xxxhdpi.png" />
+    </platform>
+
+    <!-- iOS -->
+    <platform name="ios">
+        <preference name="deployment-target" value="13.0" />
+        <preference name="WKWebViewOnly" value="true" />
+        <preference name="SwiftVersion" value="5" />
+        <preference name="StatusBarOverlaysWebView" value="false" />
+        <preference name="StatusBarStyle" value="default" />
+        <preference name="AllowInlineMediaPlayback" value="true" />
+        <icon height="20" src="resources/ios/AppIcon-20.png" width="20" />
+        <icon height="40" src="resources/ios/AppIcon-20@2x.png" width="40" />
+        <icon height="60" src="resources/ios/AppIcon-20@3x.png" width="60" />
+        <icon height="29" src="resources/ios/AppIcon-29.png" width="29" />
+        <icon height="58" src="resources/ios/AppIcon-29@2x.png" width="58" />
+        <icon height="87" src="resources/ios/AppIcon-29@3x.png" width="87" />
+        <icon height="40" src="resources/ios/AppIcon-40.png" width="40" />
+        <icon height="80" src="resources/ios/AppIcon-40@2x.png" width="80" />
+        <icon height="120" src="resources/ios/AppIcon-40@3x.png" width="120" />
+        <icon height="120" src="resources/ios/AppIcon-60@2x.png" width="120" />
+        <icon height="180" src="resources/ios/AppIcon-60@3x.png" width="180" />
+        <icon height="76" src="resources/ios/AppIcon-76.png" width="76" />
+        <icon height="152" src="resources/ios/AppIcon-76@2x.png" width="152" />
+        <icon height="167" src="resources/ios/AppIcon-83_5@2x.png" width="167" />
+        <icon height="1024" src="resources/ios/AppIcon-1024.png" width="1024" />
+    </platform>
+
+    <!-- Browser: `cordova platform add browser` per una build servibile via HTTP.
+         In alternativa, senza Cordova: `npm run serve` (PWA). -->
+    <platform name="browser">
+        <preference name="scheme" value="http" />
+        <preference name="hostname" value="localhost" />
+        <preference name="port" value="8080" />
+    </platform>
+
+    <!-- Desktop (opzionale): richiede `cordova platform add electron`.
+         Blocco lasciato commentato per non forzare la piattaforma in CI.
+    <platform name="electron">
+        <preference name="ElectronSettingsFilePath" value="resources/electron/settings.json" />
+    </platform>
+    -->
 </widget>

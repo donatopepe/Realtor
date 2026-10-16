@@ -16,7 +16,7 @@ Rendere il progetto completamente funzionante, testato, documentato, con licenza
 distribuibile pubblicamente (web PWA + APK Android), secondo PLAN.md.
 
 FONTI (leggi in quest'ordine, prima di agire)
-1. /home/public/Realtor/PLAN.md  -> §2 baseline, §4 AC, §6 milestone, §7 regole, §9 stato
+1. /home/public/Realtor/PLAN.md  -> §2 baseline, §4 AC, §6 milestone (M0→M8), §7 regole, §9 stato
 2. /home/public/Realtor/docs/ENGINEERED-PROMPT.md -> questo documento, §REGOLE
 3. /home/public/Realtor/www/js/index.js, www/index.html, config.xml -> codice originale (contesto)
 4. /home/public/HermesVault/Memory/project-state.md (se esiste) -> contesto condiviso
@@ -24,7 +24,7 @@ FONTI (leggi in quest'ordine, prima di agire)
 PROTOCOLLO DI ITERAZIONE (una sola iterazione per esecuzione)
 1. Leggi §9 di PLAN.md: se esiste un milestone in corso (non ✅ non BLOCKED), riprendi quello,
    senza aprirne un altro.
-2. Altrimenti apri il primo milestone non completato (ordine M0→M7).
+2. Altrimenti apri il primo milestone non completato (ordine M0→M8).
 3. Esegui SOLO quel milestone, con la variabile nominata in PLAN.md §6.
 4. Esegui il comando di gate del milestone e cattura l'output grezzo.
 5. Se il gate fallisce: correggi, massimo 3 tentativi totali. Poi stato BLOCKED con l'errore
@@ -37,7 +37,10 @@ PROTOCOLLO DI ITERAZIONE (una sola iterazione per esecuzione)
 REGOLE
 - Mai marcare ✅ senza output di comando registrato in §9.
 - Un criterio AC è soddisfatto solo se il suo comando in PLAN.md §4 passa; AC-01..AC-12 sono
-  hard gate (soglia AC pass ratio >= 0.95).
+  hard gate (soglia AC pass ratio >= 0.95 su 21 criteri).
+- Cross-platform: un solo sorgente `www/` per Android, iOS e web/PWA. Nessun ramo condizionale
+  per piattaforma nel codice dell'app: solo feature detection, isolata in `www/js/platform.js`.
+  Non introdurre dipendenze che rompono una delle tre piattaforme (niente API Node-only nel web).
 - Non introdurre endpoint privati o hardcoded; l'API e' configurabile da UI, default offline.
 - Nessuna rimozione di dati utente: la rimozione locale di una scheda avviene solo dopo 2xx.
 - Non committare artefatti di build (platforms/, plugins/, node_modules/, APK, keystore),
@@ -66,3 +69,4 @@ Prossimo passo: <una riga>
 5. **Idempotenza**: il loop può rieseguire la stessa iterazione senza duplicare effetti (untrack già fatto, test già verdi, file già scritti).
 6. **Stop conditions**: tutti i milestone ✅ → `cron_delete` del loop; oppure BLOCKED su un hard gate con fallback esaurito → il loop resta attivo per ritentare ma riporta il blocco.
 7. **Sicurezza**: nessun segreto nel repo/vault; keystore di release solo in GitHub Secrets; cleartext HTTP vietato nei build di release.
+8. **Cross-platform**: ogni modifica deve restare valida su tutte le piattaforme dichiarate (`android`, `ios`, `browser`); le funzionalità non disponibili si degradano con i fallback web di `www/js/platform.js`, non con rami condizionali sparsi.
