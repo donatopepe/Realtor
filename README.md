@@ -1,87 +1,179 @@
 # Realtor
 
-Applicazione di statistica e stime immobiliari: creazione, gestione e invio di
-**schede immobiliari** (nome, indirizzo, descrizione, prezzo) con funzionamento
-**offline-first**, distribuita sia come **PWA/web** sia come **app Android**
-(Cordova).
+Gestione **offline-first** di schede immobiliari (nome, indirizzo, descrizione, prezzo):
+un'unica base di codice per **web/PWA**, **Android** e **iOS**, con invio opzionale a un
+endpoint REST configurato dall'utente e server di riferimento incluso.
 
-> **Stato: v1.0.0 in preparazione.** L'app 0.0.1 (Cordova 3.x, 2014) non è più
-> buildabile con le toolchain moderne e conteneva un bug di perdita dati su
-> "Invia schede". Il piano di modernizzazione, i criteri di accettazione e lo
-> stato di avanzamento sono in [PLAN.md](PLAN.md); il log delle verifiche è nella
-> §9 dello stesso file.
+[![CI](https://github.com/donatopepe/Realtor/actions/workflows/ci.yml/badge.svg)](https://github.com/donatopepe/Realtor/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Node](https://img.shields.io/badge/node-%3E%3D20-brightgreen.svg)](package.json)
+
+| Web/PWA | Nuova scheda | Elenco | Impostazioni |
+|---|---|---|---|
+| ![home](docs/screenshots/home.png) | ![scheda](docs/screenshots/scheda.png) | ![elenco](docs/screenshots/elenco.png) | ![impostazioni](docs/screenshots/impostazioni.png) |
+
+> **English summary** — Realtor is an offline-first property-appraisal card manager
+> (one codebase for web/PWA, Android and iOS): cards are stored locally, the REST
+> endpoint used to upload them is configured by the user (empty = offline only) and a
+> reference API server with tests and a Dockerfile is included. MIT licensed.
 
 ---
 
-## Funzionalità previste (v1.0.0)
+## Funzionalità
 
-- Creazione, modifica, elenco ed eliminazione di schede immobiliari.
-- Persistenza locale offline (localStorage) con schema validato.
-- Invio delle schede a un endpoint REST **configurabile dalla pagina Impostazioni**
-  (nessun server cablato nel codice); le schede vengono rimosse localmente solo
-  dopo una risposta 2xx.
-- Backup: esportazione/importazione JSON, più import del formato storico 0.0.1.
-- Modalità web (PWA installabile) e app Android firmabile.
+- Creazione, modifica, elenco ed eliminazione di schede immobiliari, salvate **solo sul dispositivo**.
+- **Nessuna perdita di dati**: le schede vengono rimosse in locale soltanto dopo una risposta `2xx` del server.
+- **Endpoint REST configurabile** dalla pagina Impostazioni; con campo vuoto l'app resta **offline** (nessun server cablato nel codice).
+- **Backup**: esportazione/importazione JSON (aggiungi o sostituisci) con validazione *prima* di scrivere.
+- **Migrazione** automatica delle schede salvate con la versione 0.0.1.
+- Prezzi in formato italiano (`150.000,50`), nome scheda obbligatorio, limiti di lunghezza validati.
+- **PWA installabile** con service worker: l'app si apre anche senza rete.
+- Stessa interfaccia su Android e iOS tramite Cordova, con plugin nativi (dialoghi, stato rete) e fallback web.
+- Server API di riferimento (Node, zero dipendenze) con archivio JSON atomico, Docker e health check.
 
 ## Requisiti
 
-- Node.js >= 20 (verificato con 26.x)
-- Per il build Android: JDK 17+, Android SDK (build-tools + platform) e Gradle
-  (fornito dal wrapper della platform Cordova)
+| Ambito | Requisiti |
+|--------|-----------|
+| Web/PWA | Node.js >= 20 (verificato con 26), un browser moderno |
+| Test end-to-end | Chromium scaricato da Playwright (`npx playwright install chromium`) |
+| Android | JDK 17, Android SDK (platform + build-tools 36) con `ANDROID_HOME` esportato |
+| iOS | macOS con Xcode (la compilazione non è possibile su Linux/Windows) |
+| Server/Docker | Node.js >= 20 oppure Docker |
+| Icone | bash + ImageMagick (solo per rigenerare le icone) |
 
-## Avvio rapido (web)
+## Avvio rapido
+
+Web (PWA), senza installare nulla oltre a Node:
 
 ```bash
 npm ci
-npm run serve        # apre www/ su http://localhost:8080
+npm run serve
+# apri http://localhost:8080
 ```
+
+Per provarla da un telefono nella stessa rete:
+
+```bash
+npm run serve:lan
+```
+
+Server REST di riferimento (opzionale per provare l'invio):
+
+```bash
+npm run server
+# API su http://localhost:3000
+```
+
+Nell'app: **Impostazioni** → Endpoint REST → `http://<ip-del-pc>:3000/realtor/api/scheda` → *Salva impostazioni*.
+Il contratto completo è in [docs/API.md](docs/API.md).
 
 ## Test
 
 ```bash
-npm test             # unit + integration
-npm run test:e2e     # end-to-end (Playwright)
-npm run lint         # stile codice
-npm run server:test  # API di riferimento
+npm test                  # unit + integrazione + server (171 test, node:test)
+npm run test:coverage     # copertura (core e UI >= 90%)
+npm run test:e2e          # end-to-end Playwright su desktop e mobile (39 test)
+npm run server:test       # solo i test dell'API di riferimento
+npm run lint              # ESLint su app, server, script e test
+npm run scan:secrets      # scansione segreti nel working tree
+npm run scan:secrets:history  # scansione segreti in tutta la storia git
+npm run docs:check        # verifica che la documentazione sia eseguibile
 ```
 
-## Server di riferimento (opzionale)
+## Build
 
-```bash
-npm run server       # API REST locale su http://localhost:3000
-```
-
-Imposta l'URL (`http://localhost:3000/realtor/api/scheda`) nella pagina
-Impostazioni dell'app. Contratto dell'API: `docs/API.md`.
-
-## Build Android
+Android (APK debug, non firmato per la pubblicazione):
 
 ```bash
 npm ci
-npx cordova platform add android   # rigenera platforms/ (non versionato)
-npm run build:android              # APK debug
+npx cordova platform add android   # oppure: npm run prepare:android
+npm run build:android              # APK in platforms/android/app/build/outputs/apk/debug/
 ```
 
-L'APK viene prodotto in `platforms/android/app/build/outputs/apk/`.
-Le firme di release non sono versionate: vedi `docs/PUBLISHING.md`.
+iOS (richiede macOS):
 
-## Struttura del progetto
+```bash
+npm run prepare:ios
+npm run build:ios                  # oppure: cordova build ios --emulator
+```
 
+Web: `www/` è già la build — va servita staticamente (GitHub Pages, nginx, `npm run serve`).
+Non usare `cordova platform add browser`: `cordova-browser` non è compatibile con questo package
+ESM (`"type": "module"`).
+
+Icone (PWA, densità Android, set iOS) generate dal logo:
+
+```bash
+npm run icons
 ```
-www/            sorgente unico dell'app (UI + core testabile, PWA)
-server/         API REST di riferimento (Node, zero dipendenze runtime)
-tests/          unit/integration (node:test) ed e2e (Playwright)
-docs/           architettura, API, migrazione, pubblicazione, prompt operativo
-PLAN.md         piano di modernizzazione, criteri di accettazione, log verifiche
+
+## Server
+
+```bash
+npm run server                        # archivio JSON in ./data/cards.json
+node server/src/server.js --memory    # archivio volatile, utile per una demo
+npm run docker:build && npm run docker:run
 ```
+
+Endpoint: `GET /health`, `GET|POST /realtor/api/scheda`. Token opzionale con
+`REALTOR_API_TOKEN`, CORS con `REALTOR_CORS_ORIGIN`, limite corpo 1 MiB. Dettagli in
+[docs/API.md](docs/API.md); pubblicazione in [docs/PUBLISHING.md](docs/PUBLISHING.md).
+
+## Struttura
+
+```text
+www/                  unica base di codice servita a browser, Android e iOS
+  index.html          UI jQuery Mobile (home, scheda, elenco, impostazioni)
+  manifest.webmanifest / sw.js   PWA installabile e uso offline
+  css/index.css
+  img/                logo, icone PWA, favicon, apple-touch-icon
+  js/app.js           collegamento fra UI e core
+  js/platform.js      adapter Cordova + fallback web (dialoghi, rete, uscita)
+  js/core/            schema, storage, api, settings, backup, migration (nessuna dipendenza)
+server/               API REST di riferimento (Node senza dipendenze + Dockerfile)
+tests/                unit/integration (node:test) ed end-to-end (Playwright)
+scripts/              serve statico, icone, scansione segreti, verifica documentazione
+resources/            icone native Android/iOS generate
+docs/                 API, architettura, migrazione, pubblicazione, screenshot
+config.xml            configurazione Cordova (android + ios, plugin, icone)
+PLAN.md               piano di lavoro, criteri di accettazione e log delle verifiche
+```
+
+Architettura, flussi e scelte tecniche: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+Passaggio dalla 0.0.1: [docs/MIGRATION.md](docs/MIGRATION.md).
+
+## Piattaforme
+
+| Piattaforma | Stato | Come si ottiene |
+|-------------|-------|-----------------|
+| Web / PWA | ✅ verificata end-to-end (desktop + mobile) | `npm run serve` o hosting statico di `www/` |
+| Android | ✅ APK debug costruito e verificato (minSdk 24, targetSdk 36) | `npm run build:android` |
+| iOS | ✅ progetto e impostazioni pronti; compilazione in CI su macOS | `npm run build:ios` su macOS |
+| Desktop (Electron) | ⏳ opzionale, non incluso nella v1.0.0 | blocco commentato in `config.xml` |
+
+Nessun ramo condizionale per piattaforma nel codice: le differenze passano da
+`www/js/platform.js` (feature detection) e il resto dell'app è identico ovunque.
+
+## Risoluzione dei problemi
+
+| Sintomo | Causa e rimedio |
+|---------|-----------------|
+| `cordova platform add android` dice "Platform android already added" | Esiste una cartella `platforms/android` non valida: rimuovila (`rm -rf platforms plugins`) e ripeti |
+| La build Android non trova l'SDK | Esporta `ANDROID_HOME` (es. `export ANDROID_HOME=/opt/android-sdk`) e installa platform/build-tools 36 |
+| Nel browser compare un 404 su `cordova.js` | Usa `npm run serve` (serve uno shim) oppure ignora: nel browser l'app usa i fallback web |
+| I pulsanti non reagiscono su desktop | Aggiorna all'ultima versione: fino a M4 i comandi erano legati solo all'evento `tap` (touch) |
+| `npm run test:e2e` chiede un browser | `npx playwright install chromium` |
+| L'invio dice "Endpoint API non configurato" | È il comportamento previsto in modalità offline: imposta l'endpoint in Impostazioni |
 
 ## Licenza
 
-[MIT](LICENSE) © 2014-2026 Donato Pepe. Attribuzioni di terze parti in
-[NOTICE](NOTICE).
+[MIT](LICENSE) © 2014-2026 Donato Pepe. Attribuzioni di terze parti in [NOTICE](NOTICE).
+Contributi: [CONTRIBUTING.md](CONTRIBUTING.md) · sicurezza: [SECURITY.md](SECURITY.md).
 
-## Roadmap
+## Note sul progetto
 
-Vedi `PLAN.md` (§6 Milestone): igiene repo e licenza, estrazione del core con
-test, correzione dei bug funzionali, server di riferimento, e2e, Cordova
-moderno con APK, documentazione completa, rilascio v1.0.0.
+Questo repository nasce dall'app Cordova 0.0.1 del 2014, non più buildabile e con un bug di
+perdita dati in "Invia schede". Il percorso di modernizzazione, i criteri di accettazione
+(22) e il log delle verifiche con gli output dei comandi sono in [PLAN.md](PLAN.md);
+le modifiche rilasciate in [CHANGELOG.md](CHANGELOG.md).

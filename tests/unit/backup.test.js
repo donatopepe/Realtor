@@ -6,7 +6,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
 import { BACKUP_FORMAT, BACKUP_VERSION, createBackup } from '../../www/js/core/backup.js';
-import { CARD_KEY_PREFIX, createCardStore } from '../../www/js/core/storage.js';
+import { createCardStore } from '../../www/js/core/storage.js';
 import { createMemoryStorage } from '../helpers/fakes.js';
 
 function setup({ cards = [], appVersion = '1.0.0', now } = {}) {
