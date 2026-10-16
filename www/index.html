@@ -22,9 +22,7 @@
 
         <meta charset="utf-8" />
         <meta name="format-detection" content="telephone=no" />
-        <!-- WARNING: for iOS 7, remove the width=device-width and height=device-height attributes. See https://issues.apache.org/jira/browse/CB-4323 -->
         <meta name="viewport" content="user-scalable=no, initial-scale=1, maximum-scale=1, minimum-scale=1, width=device-width, height=device-height" />
- 		<!--, target-densitydpi=device-dpi disabilitato da precedente per incompatibilita -->
         <title>Realtor</title>
  
    		<link rel="stylesheet" type="text/css" href="js/jquery/jquery.mobile-1.4.2.min.css" />
@@ -34,23 +32,22 @@
         <script type="text/javascript" src="cordova.js"></script>
         
         <script type="text/javascript" src="js/jquery/jquery-2.1.0.min.js"></script>
+
+        <script type="text/javascript">
+            // Opzioni di jQuery Mobile: devono essere impostate prima della libreria.
+            $(document).on("mobileinit", function () {
+                $.mobile.allowCrossDomainPages = true;
+            });
+        </script>
+
         <script type="text/javascript" src="js/jquery/jquery.mobile-1.4.2.min.js"></script>
-   
-        <script type="text/javascript" src="js/index.js"></script>
+
+        <!-- App: core + UI, modulo ES (boot automatico) -->
+        <script type="module" src="js/app.js"></script>
         
 		
     </head>
     <body>
- <!--
-        <div class="app">
-            <h1>Realtor</h1>
-            <div id="deviceready" class="blink">
-
-                <p class="event listening">Connecting to Device</p>
-                <p class="event received">Device is Ready</p>
-            </div>
-         </div>
-	-->
     
             <div data-role="page" id="homePage">
     			<div data-theme="a" data-role="header">
@@ -86,7 +83,7 @@
             		<textarea name="txtDescrizione" id="txtDescrizione" placeholder="Descrizione"></textarea>
         	  </div>
         	  <div data-role="fieldcontain">
-            		<input name="txtPrezzo" id="txtPrezzo" placeholder="Prezzo" value="" type="number">
+            		<input name="txtPrezzo" id="txtPrezzo" placeholder="Prezzo (es. 150.000,50)" value="" type="text" inputmode="decimal">
         	  </div>
         	  <div data-role="fieldcontain">
             		<a id="btnSalva" data-role="button" href="#">Salva</a>
@@ -106,17 +103,6 @@
  
 	    	<div data-role="content">
     	    <ul id="liElencoSchede" data-role="listview" data-divider-theme="d" data-inset="true">
-            <!--	<li data-role="list-divider" role="heading">Schede</li>
-           		 <li data-theme="c">
-                		<a href="#scheda" data-transition="slide">Appartamento Firenze Centro</a>
-           		 </li>
-           		 <li data-theme="c">
-                	<a href="#scheda" data-transition="slide">Villa Roma Trastevere</a>
-            	 </li>
-           		 <li data-theme="c">
-                		<a href="#scheda" data-transition="slide">Villetta a schiera Napoli Vomero</a>
-            	 </li>
-            	 -->	
         	</ul>
     		</div>
      
@@ -125,12 +111,6 @@
    			 </div>
 		</div>
 
-         <script type="text/javascript">
-                  //  app.initialize();
-    	   $(document).ready(function() {
-   				 app.initialize();
-		   });
-        </script>
     </body>
     
     
