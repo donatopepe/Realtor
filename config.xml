@@ -29,14 +29,17 @@
     <preference name="Orientation" value="portrait" />
     <preference name="DisallowOverscroll" value="true" />
     <preference name="Fullscreen" value="false" />
-    <preference name="BackgroundColor" value="0xffe4e4e4" />
+
+    <!-- Plugin usati dall'app (oltre ai fallback web di www/js/platform.js) -->
+    <plugin name="cordova-plugin-dialogs" spec="^2.0.2" />
+    <plugin name="cordova-plugin-network-information" spec="^3.1.0" />
 
     <!-- Android -->
     <platform name="android">
         <preference name="AndroidLaunchMode" value="singleTop" />
         <preference name="android-minSdkVersion" value="24" />
-        <preference name="android-targetSdkVersion" value="35" />
-        <preference name="android-compileSdkVersion" value="35" />
+        <preference name="android-targetSdkVersion" value="36" />
+        <preference name="android-compileSdkVersion" value="36" />
         <preference name="AndroidXEnabled" value="true" />
         <preference name="AndroidInsecureFileModeEnabled" value="false" />
         <preference name="AndroidPersistentFileLocation" value="Internal" />
@@ -73,13 +76,10 @@
         <icon height="1024" src="resources/ios/AppIcon-1024.png" width="1024" />
     </platform>
 
-    <!-- Browser: `cordova platform add browser` per una build servibile via HTTP.
-         In alternativa, senza Cordova: `npm run serve` (PWA). -->
-    <platform name="browser">
-        <preference name="scheme" value="http" />
-        <preference name="hostname" value="localhost" />
-        <preference name="port" value="8080" />
-    </platform>
+    <!-- Web/PWA: `www/` si serve staticamente (npm run serve, GitHub Pages, ...) con
+         manifest e service worker; è questa la piattaforma web supportata.
+         NON usare `cordova platform add browser`: cordova-browser non è compatibile
+         con un package ESM ("type": "module") come questo. -->
 
     <!-- Desktop (opzionale): richiede `cordova platform add electron`.
          Blocco lasciato commentato per non forzare la piattaforma in CI.

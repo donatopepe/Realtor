@@ -46,15 +46,27 @@
     "scan:secrets:history": "node scripts/scan-secrets.js --history",
     "prepare:android": "cordova platform add android",
     "prepare:ios": "cordova platform add ios",
-    "prepare:browser": "cordova platform add browser",
     "prepare:electron": "cordova platform add electron",
     "build:android": "cordova build android",
     "build:android:release": "cordova build android --release",
     "build:ios": "cordova build ios",
-    "build:browser": "cordova build browser",
-    "build:web": "cordova build browser"
+    "e2e": "playwright test"
   },
   "devDependencies": {
-    "@playwright/test": "^1.64.1"
+    "@playwright/test": "^1.64.1",
+    "cordova": "^13.0.0",
+    "cordova-android": "^15.1.0",
+    "cordova-ios": "^8.1.1",
+    "cordova-plugin-dialogs": "^2.0.2",
+    "cordova-plugin-network-information": "^3.1.0"
+  },
+  "cordova": {
+    "platforms": [
+      "android"
+    ],
+    "plugins": {
+      "cordova-plugin-dialogs": {},
+      "cordova-plugin-network-information": {}
+    }
   }
 }
