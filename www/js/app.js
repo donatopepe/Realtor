@@ -64,6 +64,48 @@ export function createApp({
     return message;
   }
 
+  /**
+   * Collega un comando al "click virtuale", una volta sola per interazione.
+   *
+   * Con jQuery Mobile la stessa interazione produce `vclick` e, a seconda della
+   * piattaforma, anche `tap` e/o un `click` sintetico del browser: si esegue
+   * `vclick` e si ignorano le copie che arrivano subito dopo. Due interazioni
+   * distinte dell'utente restano invece entrambe valide, anche se ravvicinate.
+   * Senza jQuery Mobile (solo `click`) ogni click viene eseguito.
+   * @param {object} $element
+   * @param {Function} handler
+   */
+  function bindActivate($element, handler) {
+    let lastVirtual = 0;
+    const run = (event, kind) => {
+      const now = Date.now();
+      if (kind !== 'vclick' && now - lastVirtual < 300) return undefined;
+      lastVirtual = now;
+      return handler(event);
+    };
+    $element.on('vclick', (event) => run(event, 'vclick'));
+    $element.on('tap', (event) => run(event, 'tap'));
+    $element.on('click', (event) => run(event, 'click'));
+    return $element;
+  }
+
+  /**
+   * Collega un'azione "pressione prolungata".
+   * Su touch vale `taphold` di jQuery Mobile; con il mouse (browser desktop e
+   * PWA) vale il menu contestuale, che sulla maggior parte dei dispositivi
+   * mobili corrisponde alla pressione prolungata.
+   * @param {object} $element
+   * @param {Function} handler
+   */
+  function bindHold($element, handler) {
+    $element.on('taphold', handler);
+    $element.on('contextmenu', (event) => {
+      if (event && typeof event.preventDefault === 'function') event.preventDefault();
+      return handler(event);
+    });
+    return $element;
+  }
+
   // ---------------------------------------------------------------- schede --
 
   function readForm() {
@@ -119,12 +161,21 @@ export function createApp({
       const $item = $("<li data-theme='c'><a href='#' data-transition='slide'></a></li>");
       const $link = $item.find('a');
       $link.text(card.nome);
-      $link.on('tap', () => openCard(card.nome));
-      $item.on('taphold', () => removeCard(card.nome));
+      bindActivate($link, () => openCard(card.nome));
+      bindHold($item, () => removeCard(card.nome));
       $list.append($item);
     }
 
-    if (typeof $list.listview === 'function') $list.listview('refresh');
+    if (typeof $list.listview === 'function') {
+      // La listview può non essere ancora inizializzata (elenco mai aperto in
+      // questa sessione): jQuery Mobile lancia un errore. Si ignora il refresh,
+      // che verrà ripetuto al `pagebeforeshow` della pagina.
+      try {
+        $list.listview('refresh');
+      } catch (error) {
+        logger.log?.('Listview non ancora inizializzata, refresh rimandato', error?.message ?? error);
+      }
+    }
     return cards;
   }
 
@@ -359,8 +410,8 @@ export function createApp({
     applyPlatformUi();
     api.setBaseUrl(settings.get().apiBaseUrl);
 
-    $('#btnSalva').on('tap', saveCurrent);
-    $('#btnExit').on('tap', () => platform.exit());
+    bindActivate($('#btnSalva'), saveCurrent);
+    bindActivate($('#btnExit'), () => platform.exit());
 
     $('#elencoSchede').on('pagebeforeshow', renderList);
     $('#scheda').on('pagebeforeshow', () => {
@@ -369,7 +420,7 @@ export function createApp({
     });
     $('#impostazioni').on('pagebeforeshow', () => fillSettingsForm());
 
-    $('#btnInviaSchede').on('tap', async () => {
+    bindActivate($('#btnInviaSchede'), async () => {
       if (!platform.isOnline()) {
         platform.alert('Connessione Internet non disponibile!', 'Informazione');
         updateOnlineState();
@@ -378,11 +429,11 @@ export function createApp({
       await sendAll();
     });
 
-    $('#btnSalvaImpostazioni').on('tap', saveSettings);
-    $('#btnEsportaBackup').on('tap', () => exportBackup({ download: true }));
-    $('#btnImportaBackup').on('tap', () => importBackup({ mode: 'merge' }));
-    $('#btnImportaSostituisci').on('tap', () => importBackup({ mode: 'replace' }));
-    $('#btnMigraLegacy').on('tap', () => migrateNow());
+    bindActivate($('#btnSalvaImpostazioni'), saveSettings);
+    bindActivate($('#btnEsportaBackup'), () => exportBackup({ download: true }));
+    bindActivate($('#btnImportaBackup'), () => importBackup({ mode: 'merge' }));
+    bindActivate($('#btnImportaSostituisci'), () => importBackup({ mode: 'replace' }));
+    bindActivate($('#btnMigraLegacy'), () => migrateNow());
 
     platform.on('online', updateOnlineState);
     platform.on('offline', updateOnlineState);
@@ -399,6 +450,30 @@ export function createApp({
     return migrateNow({ silent: true });
   }
 
+  /**
+   * Registra il service worker per l'uso offline.
+   * Attivo solo su http/https (nella PWA e in Cordova con schema web); su
+   * `file://` o dove l'API non esiste non fa nulla.
+   * @returns {Promise|null}
+   */
+  function registerServiceWorker() {
+    const nav = win && win.navigator;
+    const location = win && win.location;
+    if (!nav || !('serviceWorker' in nav) || !location || !/^https?:$/.test(location.protocol)) return null;
+    try {
+      const registration = nav.serviceWorker.register('sw.js');
+      if (registration && typeof registration.catch === 'function') {
+        registration.catch((error) => {
+          if (typeof logger.warn === 'function') logger.warn('Service worker non registrato', error);
+        });
+      }
+      return registration;
+    } catch (error) {
+      logger.error('Registrazione del service worker non riuscita', error);
+      return null;
+    }
+  }
+
   return {
     store,
     api,
@@ -407,6 +482,8 @@ export function createApp({
     platform,
     bindEvents,
     applyPlatformUi,
+    bindActivate,
+    bindHold,
     updateOnlineState,
     renderList,
     readForm,
@@ -424,6 +501,7 @@ export function createApp({
     importBackup,
     migrateNow,
     runStartupMigration,
+    registerServiceWorker,
     backupFileName,
     setStatus,
   };
@@ -439,6 +517,7 @@ export function boot({ win = typeof window !== 'undefined' ? window : globalThis
     app.runStartupMigration();
     app.bindEvents();
     app.updateOnlineState();
+    app.registerServiceWorker();
   };
   const doc = win.document;
   if (doc && doc.readyState === 'loading') {

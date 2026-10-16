@@ -14,7 +14,7 @@
 | D2 | Prompt ingegnerizzato | ✅ fatto | `docs/ENGINEERED-PROMPT.md` |
 | D3 | Piano in un file | ✅ fatto | questo file |
 | D4 | Loop di lavorazione | ✅ creato (cron durable) | task `realtor-modernizzazione` |
-| D5 | Progetto corretto, testato, documentato, MIT, distribuibile | ⏳ in corso — M0…M4 ✅, AC 15/22 | milestone M0→M8 |
+| D5 | Progetto corretto, testato, documentato, MIT, distribuibile | ⏳ in corso — M0…M5 ✅, AC 17/22 | milestone M0→M8 |
 | D6 | Cross-platform: stesso sorgente per **Android, iOS, web/PWA** (desktop Electron opzionale) | ✅ fondamenta (M2); build per piattaforma in M6 | `www/`, `config.xml`, `resources/`, `scripts/serve.js` |
 | D7 | Igiene dei segreti: nessuna credenziale nel working tree **né nella storia git**, con scansione automatica nei test | ✅ fatto (M2) | `scripts/scan-secrets.js`, `tests/unit/secrets.test.js` |
 
@@ -68,6 +68,8 @@ Ambiente verificato: Node `v26.11.1`, npm `12.2.0`, Java 17 + 27, `gradle` di si
 | 20 | Nessuna difesa automatica contro l'introduzione di segreti (nessuno scanner, nessuna regola `.gitignore` per `.pem`, `.p12`, `key.properties`, `google-services.json`) | Rischio di pubblicare credenziali con un commit |
 | 21 | `#btnInviaSchede` puntava a `href="#page1"`, pagina inesistente: il tocco cambiava pagina senza inviare | Comando di invio che portava a una pagina vuota |
 | 22 | Nessuna pagina impostazioni: endpoint API e modalità offline non configurabili dall'utente; nessun backup/ripristino; dati 0.0.1 non migrabili | App utilizzabile solo con il server originale |
+| 23 | **Trovato dagli E2E:** i comandi erano legati solo all'evento `tap` di jQuery Mobile, che con il mouse non viene emesso | Nel browser desktop (PWA) i pulsanti non facevano nulla: l'app era di fatto solo touch |
+| 24 | **Trovato dagli E2E:** dopo un invio riuscito `renderList()` chiamava `listview('refresh')` su una listview non inizializzata → eccezione e conferma "Schede inviate" mai mostrata | L'utente non vedeva l'esito dell'invio, pur avvenuto; errore in console a ogni invio |
 
 ---
 
@@ -118,6 +120,7 @@ Criteri qualitativi di D5 (rubrica 0/1, prima del primo tentativo): funzionament
 www/                     unico sorgente per Android, iOS, browser/PWA
   index.html             UI jQuery Mobile (pagine: home, scheda, elenco, impostazioni, info)
   manifest.webmanifest   PWA installabile (Android, iOS, desktop)
+  sw.js                  service worker: app shell offline, mai su POST o su altre origini
   img/icon-*.png         icone web/maskable/favicon/apple-touch
   css/index.css          stili base condivisi (+ safe area iOS, campi editabili)
   js/core/storage.js     Repository schede su storage iniettabile (no jQuery, no Cordova)
@@ -137,8 +140,9 @@ server/                  API REST di riferimento (Node, zero dipendenze runtime,
   src/server.js          /health, GET/POST /realtor/api/scheda, token opzionale, CORS, limiti
   src/store.js           archivio in memoria o JSON con scrittura atomica (file corrotto messo da parte)
   Dockerfile             immagine node:22-alpine, utente non privilegiato, volume /data, HEALTHCHECK
-tests/                   node:test (unit + integrazione, 142) · server/test (25) · Playwright (e2e) [M5]
-docs/                    ENGINEERED-PROMPT.md, API.md · ARCHITECTURE/PUBLISHING/MIGRATION [M7]
+tests/                   node:test (unit + integrazione, 170) · server/test (25) · e2e Playwright (19 scenari × 2 viewport)
+playwright.config.js     E2E: 2 progetti (desktop, mobile Pixel 5) + 2 server reali (app e API)
+docs/                    ENGINEERED-PROMPT.md, API.md, screenshots/ · ARCHITECTURE/PUBLISHING/MIGRATION [M7]
 .github/workflows/       ci.yml (ubuntu: lint+test+web+android; macos: ios), release.yml      [M6/M7]
 ```
 
@@ -155,7 +159,7 @@ Principi: logica core pura e iniettabile → testabile in Node senza device; `ww
 | M2 | **Fondamenta cross-platform + igiene segreti:** manifest PWA + icone generate da `scripts/make-icons.sh` (PWA, densità Android, set iOS), server statico `scripts/serve.js` (MIME corretti, shim `cordova.js`, fallback SPA, anti-traversal), `config.xml` multi-piattaforma `android`+`ios`+`browser` con icone native, adapter con `canExit`/`platformName`, meta/CSS per iOS e web (safe area, campi editabili), pulizia CSS morto, **scanner segreti (`scripts/scan-secrets.js`) su working tree e storia, riscrittura della storia (rimossi `platforms/`, `plugins/`, `hooks/`, `*.bat`, `local.properties`, PDF personale) e force-push** | `npm test` verde (87 test: pwa, serve, platform, secrets, core) e `npm run serve` + curl 200/MIME corretti su `/`, `/manifest.webmanifest`, `/cordova.js`, `/img/icon-192.png`; `npm run scan:secrets:history` = 0 | AC-16, AC-17, AC-18, AC-19, AC-20, AC-22 | ✅ 2026-10-16 |
 | M3 | **Impostazioni, backup e migrazione:** pagina `#impostazioni` (endpoint REST configurabile o vuoto = offline, stato schede/modalità, comandi backup e migrazione), `core/settings.js`, `core/backup.js` (export/import con validazione preventiva, merge/replace), `core/migration.js` (schede 0.0.1 spostate senza sovrascrivere, idempotente), wiring completo in `app.js`, fix del link morto `#page1`, test della UI con jQuery finta | `npm test` verde (142 test, `app.js` coperto al 93%); `npm run serve` + `curl` su `/` e `/manifest.webmanifest` | AC-07, AC-08, AC-09 | ✅ 2026-10-16 |
 | M4 | **Server API di riferimento:** `server/src/server.js` (`GET /health`, `GET/POST /realtor/api/scheda`, token Bearer opzionale a tempo costante, CORS, limiti corpo, errori tipizzati), `server/src/store.js` (memoria o JSON atomico con quarantena dei file corrotti), `server/Dockerfile` + `.dockerignore`, `docs/API.md`, 25 test di integrazione (incluso il contratto end-to-end con `www/js/core/api.js`) e `npm test` esteso a `server/test/` | `npm run server:test` verde; smoke reale con `curl` (201/400/415/413) e immagine Docker con `HEALTHCHECK` = `healthy` | AC-10 | ✅ 2026-10-16 |
-| M5 | E2E Playwright multi-viewport (mobile/desktop) + service worker per l'uso offline + screenshot per README | `npm run test:e2e` verde | AC-03, AC-06, AC-16, AC-17 | ⏳ |
+| M5 | **E2E multi-viewport + offline:** Playwright con due progetti (`desktop` 1280×800, `mobile` Pixel 5) e due server reali avviati dal config (app su 8123, API su 8124); 19 scenari (home, form, elenco, modifica, eliminazione, validazioni, impostazioni, invio senza/con server, server irraggiungibile, backup, migrazione automatica, manifest, shim `cordova.js`, service worker, uso offline); service worker `www/sw.js` con app shell in cache e nessuna intercettazione di POST/altre origini; screenshot per il README in `docs/screenshots/`. Fix richiesti dagli E2E: comandi legati a `vclick`/`tap`/`click` (funzionano anche con il mouse) e refresh della listview non inizializzata | `npm run test:e2e` verde (39 passed) e `npm test` verde (170) | AC-03, AC-06, AC-16, AC-17 | ✅ 2026-10-16 |
 | M6 | Cordova multi-piattaforma: `cordova-android@^14` + `cordova-ios@^7` + `cordova-browser` (Electron opzionale), engine/plugin dichiarati in `package.json`, build APK/AAB, progetto iOS avviabile, CI matrix `ubuntu`+`macos` | `npx cordova build android` → APK; `npx cordova build browser`; iOS su runner macOS | AC-05, AC-18, AC-21 | ⏳ |
 | M7 | Documentazione completa (README EN + quick start IT, ARCHITECTURE, MIGRATION, PUBLISHING, matrice piattaforme) + lint + CI | `npm run lint` verde, `npm run docs:check` verde | AC-02, AC-11 | ⏳ |
 | M8 | Rilascio: commit, push, tag `v1.0.0`, GitHub Release con APK e build web, CI verde | `gh run list --limit 1` = success | AC-15, AC-21 | ⏳ |
@@ -187,6 +191,8 @@ Regola di gate: un milestone è ✅ solo con output grezzo dei comandi registrat
 | Build iOS impossibile su questa macchina (serve macOS + Xcode) | progetto iOS e CI su runner `macos` (M6); in locale si verifica solo `config.xml`/asset, non la compilazione |
 | SDK Android: presente solo `android-36`, il target dichiarato è 35 | `sdkmanager "platforms;android-35"` in M6, oppure allineamento a 36 se supportato da `cordova-android` |
 | `scripts/make-icons.sh` richiede bash + ImageMagick | le icone generate sono versionate: lo script serve solo a rigenerarle; su Windows usare WSL/Git Bash |
+| E2E in CI: Chromium (~150 MB) da scaricare | `npx playwright install --with-deps chromium` come passo di CI (M7); in locale i browser restano in `~/.cache/ms-playwright` |
+| E2E con server API condiviso tra i test (upsert per nome) | i test usano nomi unici e asserzioni relative (`count >= before + 2`), così restano indipendenti dallo stato |
 | Service worker e cache PWA possono servire versioni vecchie | strategia network-first con versione di cache e test in M5 |
 | Dopo una riscrittura di storia, GitHub conserva gli oggetti non più raggiungibili (raggiungibili solo per SHA) | verificato il 2026-10-16: il vecchio commit `7e5fee3` è ancora fetchabile per SHA. Remediation: 0 fork/star/issue → su richiesta, cancellare e ricreare il repository (stesso URL) oppure aprire un ticket GitHub Support per la GC forzata |
 | Riscrittura della storia già pubblicata | backup completo in `/home/public/HermesVault/Backups/Realtor-pre-rewrite-20261016-104244.bundle` (bundle `--all`, 14 MB) |
@@ -205,6 +211,7 @@ Regola di gate: un milestone è ✅ solo con output grezzo dei comandi registrat
 | 2026-10-16 | M2 (purge) | `gh api -X DELETE repos/donatopepe/Realtor` → `gh repo create` → `git push -u origin master`; `gh api repos/.../commits/7e5fee3`; `git fetch origin 7e5fee3` in un clone temporaneo; `gh api -X PUT .../topics` | ✅ **DONE** | Repository cancellato e ricreato (0 fork / 0 star / 0 issue / 0 PR, Pages non configurato): il vecchio SHA ora risponde `No commit found for SHA` e il fetch fallisce con `not our ref` → **purge definitiva**, nessun oggetto residuo. Ripristinati descrizione e 8 topic; `master` = `cba5910`; backup locali intatti (bundle + working tree). |
 | 2026-10-16 | M3 | `npm test` (142 test); `npm run test:coverage`; `npm run serve` + `curl` su `/` e `/manifest.webmanifest`; `node scripts/scan-secrets.js --history` | ✅ **DONE** | 142 test passati, 0 falliti; coverage: `app.js` 92.98%, `settings.js` 98.53%, `backup.js` 97.52%, `migration.js` 100%, `schema.js` 100%, `storage.js` 100%, `platform.js` 100% (totale 92.53%); 0 segreti. Pagina Impostazioni con endpoint configurabile (vuoto = offline), export/import backup (merge e replace, validazione prima di scrivere), migrazione 0.0.1 idempotente e senza sovrascritture; fix del link morto `#page1` e del form non azzerato. AC ✅: AC-07, AC-08, AC-09 (**14/22**) |
 | 2026-10-16 | M4 | `npm run server:test` (25 test); smoke reale: `node server/src/server.js --port 8091 --data-dir /tmp/…` + `curl` su `/health`, `POST` scheda (201), `POST` elenco (201), `POST` non valida (400 con `details`), `GET` elenco, lettura di `cards.json` su disco, header CORS; `docker build -f server/Dockerfile` + `docker run` + `curl` + `docker exec whoami` + `docker inspect {{.State.Health.Status}}`; `npm test` (142) | ✅ **DONE** | 25/25 test server (suite totale 167); API documentata in `docs/API.md`; normalizzazione/validazione condivise con l'app (stesso `schema.js`); upsert per nome, token Bearer, CORS, errori 400/401/404/405/413/415 tipizzati; scrittura atomica, file corrotto in quarantena; immagine Docker verificata end-to-end (`storage: file`, POST 201, GET persistente, utente `node`, `/data` scrivibile, `HEALTHCHECK` = **healthy**, 238 MB). AC ✅: AC-10 (**15/22**) |
+| 2026-10-16 | M5 | `npm run test:e2e` (2 progetti, 2 server reali) e `npm test`; `npm run test:coverage` | ✅ **DONE** | **39 E2E passati / 0 falliti** (19 scenari × desktop + mobile) e **170 test node**; service worker verificato end-to-end (registrazione, ricaricamento con rete disattivata, dati locali leggibili offline); screenshot generati (4 PNG, 1280×800); coverage `app.js` 90.09%, core ≥96%, totale 90.81%. **Due bug reali trovati e corretti dagli E2E:** (a) i comandi non rispondevano al mouse (solo `tap`); (b) dopo un invio riuscito un'eccezione della listview nascondeva la conferma `Schede inviate`. AC ✅: AC-03, AC-06, AC-16, AC-17 (**17/22**) |
 
 ---
 
