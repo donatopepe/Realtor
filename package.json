@@ -27,18 +27,18 @@
     "offline-first"
   ],
   "engines": {
-    "node": ">=20"
+    "node": ">=22"
   },
   "scripts": {
     "serve": "node scripts/serve.js",
     "serve:lan": "node scripts/serve.js --host 0.0.0.0",
     "icons": "bash scripts/make-icons.sh",
-    "test": "node --test tests/ server/test/",
-    "test:coverage": "node --test --experimental-test-coverage tests/ server/test/",
+    "test": "node --test",
+    "test:coverage": "node --test --experimental-test-coverage",
     "test:e2e": "playwright test",
     "lint": "eslint .",
     "server": "node server/src/server.js",
-    "server:test": "node --test server/test/",
+    "server:test": "node --test \"server/test/*.test.js\"",
     "docker:build": "docker build -f server/Dockerfile -t realtor-api .",
     "docker:run": "docker run --rm -p 3000:3000 -v realtor-data:/data realtor-api",
     "docs:check": "node scripts/docs-check.js",
