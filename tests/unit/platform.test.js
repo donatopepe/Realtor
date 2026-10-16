@@ -104,8 +104,35 @@ test('exit usa navigator.app.exitApp, con fallback su window.close', () => {
   assert.equal(appWin.closed, false);
 
   const webWin = createFakeWindow();
-  assert.equal(createPlatform({ win: webWin }).exit(), true);
-  assert.equal(webWin.closed, true);
+  assert.equal(createPlatform({ win: webWin }).exit(), false);
+  assert.equal(webWin.closed, false);
+});
+
+test('canExit è vero solo dove la piattaforma consente la chiusura', () => {
+  assert.equal(createPlatform({ win: createFakeWindow() }).canExit(), false);
+  const iosWin = createFakeWindow({ cordova: {} });
+  iosWin.navigator.userAgent = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)';
+  assert.equal(createPlatform({ win: iosWin }).canExit(), false);
+  const androidWin = createFakeWindow({ cordova: {} });
+  androidWin.navigator.userAgent = 'Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36';
+  androidWin.navigator.app = { exitApp() {} };
+  assert.equal(createPlatform({ win: androidWin }).canExit(), true);
+});
+
+test('platformName distingue web, android, ios e cordova', () => {
+  assert.equal(createPlatform({ win: createFakeWindow() }).platformName(), 'web');
+
+  const android = createFakeWindow({ cordova: {} });
+  android.navigator.userAgent = 'Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36';
+  assert.equal(createPlatform({ win: android }).platformName(), 'android');
+
+  const ios = createFakeWindow({ cordova: {} });
+  ios.navigator.userAgent = 'Mozilla/5.0 (iPad; CPU OS 17_0 like Mac OS X)';
+  assert.equal(createPlatform({ win: ios }).platformName(), 'ios');
+
+  const other = createFakeWindow({ cordova: {} });
+  other.navigator.userAgent = 'Mozilla/5.0 (Windows NT 10.0)';
+  assert.equal(createPlatform({ win: other }).platformName(), 'cordova');
 });
 
 test('on registra i listener su document', () => {

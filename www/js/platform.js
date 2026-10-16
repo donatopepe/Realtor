@@ -22,6 +22,26 @@ export function createPlatform({ win = typeof window !== 'undefined' ? window : 
     return typeof win.cordova !== 'undefined';
   }
 
+  /**
+   * Piattaforma corrente, dedotta senza richiedere plugin.
+   * @returns {'android'|'ios'|'cordova'|'web'}
+   */
+  function platformName() {
+    const ua = String(nav.userAgent || '');
+    if (!isCordova()) return 'web';
+    if (/iPad|iPhone|iPod/.test(ua)) return 'ios';
+    if (/Android/.test(ua)) return 'android';
+    return 'cordova';
+  }
+
+  /**
+   * `true` se la piattaforma permette di chiudere l'app dal codice.
+   * iOS e browser non lo permettono: la UI nasconde il pulsante di uscita.
+   */
+  function canExit() {
+    return Boolean(nav.app && typeof nav.app.exitApp === 'function');
+  }
+
   /** Messaggio informativo (Cordova `notification.alert` o `window.alert`). */
   function alert(message, title = 'Informazione') {
     if (notification && typeof notification.alert === 'function') {
@@ -75,17 +95,14 @@ export function createPlatform({ win = typeof window !== 'undefined' ? window : 
     return true;
   }
 
-  /** Chiude l'app (Cordova) o tenta `window.close()` (browser). */
+  /**
+   * Chiude l'app (solo Android con plugin attivo).
+   * @returns {boolean} `false` se la piattaforma non lo consente
+   */
   function exit() {
-    if (nav.app && typeof nav.app.exitApp === 'function') {
-      nav.app.exitApp();
-      return true;
-    }
-    if (typeof win.close === 'function') {
-      win.close();
-      return true;
-    }
-    return false;
+    if (!canExit()) return false;
+    nav.app.exitApp();
+    return true;
   }
 
   /**
@@ -97,5 +114,5 @@ export function createPlatform({ win = typeof window !== 'undefined' ? window : 
     if (doc && typeof doc.addEventListener === 'function') doc.addEventListener(event, handler, false);
   }
 
-  return { isCordova, alert, confirm, isOnline, exit, on };
+  return { isCordova, platformName, canExit, alert, confirm, isOnline, exit, on };
 }

@@ -119,6 +119,13 @@ export function createApp({ $, storage, platform = createPlatform(), apiBaseUrl 
     return removed;
   }
 
+  /** Nasconde i comandi non disponibili sulla piattaforma corrente. */
+  function applyPlatformUi() {
+    // iOS e web non consentono di chiudere l'app dal codice: niente pulsante "esci".
+    if (!platform.canExit()) $('#btnExit').hide();
+    return platform.platformName();
+  }
+
   /** Abilita/disabilita il pulsante di invio in base alla connessione. */
   function updateOnlineState() {
     const $button = $('#btnInviaSchede');
@@ -178,6 +185,7 @@ export function createApp({ $, storage, platform = createPlatform(), apiBaseUrl 
 
   /** Collega gli eventi della UI. */
   function bindEvents() {
+    applyPlatformUi();
     $('#btnSalva').on('tap', saveCurrent);
     $('#btnExit').on('tap', () => platform.exit());
     $('#elencoSchede').on('pagebeforeshow', renderList);
@@ -205,6 +213,7 @@ export function createApp({ $, storage, platform = createPlatform(), apiBaseUrl 
     api,
     platform,
     bindEvents,
+    applyPlatformUi,
     updateOnlineState,
     renderList,
     readForm,

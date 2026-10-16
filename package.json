@@ -31,6 +31,8 @@
   },
   "scripts": {
     "serve": "node scripts/serve.js",
+    "serve:lan": "node scripts/serve.js --host 0.0.0.0",
+    "icons": "bash scripts/make-icons.sh",
     "test": "node --test tests/",
     "test:coverage": "node --test --experimental-test-coverage tests/",
     "test:e2e": "playwright test",
@@ -39,7 +41,13 @@
     "server:test": "node --test server/test/",
     "docs:check": "node scripts/docs-check.js",
     "prepare:android": "cordova platform add android",
+    "prepare:ios": "cordova platform add ios",
+    "prepare:browser": "cordova platform add browser",
+    "prepare:electron": "cordova platform add electron",
     "build:android": "cordova build android",
-    "build:android:release": "cordova build android --release"
+    "build:android:release": "cordova build android --release",
+    "build:ios": "cordova build ios",
+    "build:browser": "cordova build browser",
+    "build:web": "cordova build browser"
   }
 }
