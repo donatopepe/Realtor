@@ -123,6 +123,9 @@ test('il codice dell’app è platform-agnostico: solo feature detection', () =>
     join(www, 'js/core/schema.js'),
     join(www, 'js/core/storage.js'),
     join(www, 'js/core/api.js'),
+    join(www, 'js/core/settings.js'),
+    join(www, 'js/core/backup.js'),
+    join(www, 'js/core/migration.js'),
   ];
   for (const file of appFiles) {
     const content = stripComments(readFileSync(file, 'utf8'));

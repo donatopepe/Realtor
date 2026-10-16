@@ -98,3 +98,11 @@ test('il core non dipende da jQuery, Cordova o window.localStorage', () => {
   const offenders = files.filter((file) => /jquery|cordova|window\.localStorage/.test(readFileSync(file, 'utf8')));
   assert.deepEqual(offenders, []);
 });
+
+test('ogni selettore usato da app.js esiste in index.html', () => {
+  const appSource = readFileSync(join(www, 'js/app.js'), 'utf8');
+  const ids = new Set([...appSource.matchAll(/\$\('#([A-Za-z0-9_-]+)'\)/g)].map((match) => match[1]));
+  assert.ok(ids.size >= 10, `trovati solo ${ids.size} selettori`);
+  const missing = [...ids].filter((id) => !indexHtml.includes(`id="${id}"`));
+  assert.deepEqual(missing, [], 'selettori senza elemento nel markup');
+});
