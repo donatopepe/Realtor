@@ -33,6 +33,9 @@
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
         <meta name="apple-mobile-web-app-title" content="Realtor" />
+        <!-- Sicurezza: nessuno script inline, nessun frame, nessun plugin. -->
+        <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self' http: https:; object-src 'none'; base-uri 'self'; form-action 'none'; worker-src 'self'; manifest-src 'self'" />
+        <meta name="referrer" content="no-referrer" />
         <link rel="manifest" href="manifest.webmanifest" />
         <link rel="icon" type="image/png" sizes="32x32" href="img/favicon-32.png" />
         <link rel="apple-touch-icon" sizes="180x180" href="img/apple-touch-icon-180.png" />
@@ -45,12 +48,8 @@
         
         <script type="text/javascript" src="js/jquery/jquery-2.1.0.min.js"></script>
 
-        <script type="text/javascript">
-            // Opzioni di jQuery Mobile: devono essere impostate prima della libreria.
-            $(document).on("mobileinit", function () {
-                $.mobile.allowCrossDomainPages = true;
-            });
-        </script>
+        <!-- Opzioni di jQuery Mobile, in un file per rispettare la CSP -->
+        <script type="text/javascript" src="js/mobileinit.js"></script>
 
         <script type="text/javascript" src="js/jquery/jquery.mobile-1.4.2.min.js"></script>
 
@@ -147,6 +146,14 @@
 				<a id="btnEsportaBackup" data-role="button" href="#" data-icon="action" data-iconpos="left">Esporta backup JSON</a>
 				<a id="btnImportaBackup" data-role="button" href="#" data-icon="plus" data-iconpos="left">Importa e aggiungi</a>
 				<a id="btnImportaSostituisci" data-role="button" href="#" data-icon="refresh" data-iconpos="left">Importa e sostituisci</a>
+
+				<div data-role="fieldcontain">
+					<label for="txtPassword">Password per il backup cifrato</label>
+					<input id="txtPassword" name="txtPassword" type="password" placeholder="almeno 8 caratteri" value="" autocomplete="new-password" />
+					<p class="ui-bar ui-bar-a" data-role="none">Con la cifratura il file esportato &#232; illeggibile senza password (AES-256-GCM, PBKDF2-SHA256). La password non viene salvata: se la perdi, il backup non &#232; recuperabile.</p>
+				</div>
+				<a id="btnEsportaCifrato" data-role="button" href="#" data-icon="lock" data-iconpos="left">Esporta cifrato</a>
+				<a id="btnImportaCifrato" data-role="button" href="#" data-icon="unlock" data-iconpos="left">Importa cifrato</a>
 
 				<h3>Dati della versione 0.0.1</h3>
 				<a id="btnMigraLegacy" data-role="button" href="#" data-icon="forward" data-iconpos="left">Cerca e importa schede vecchie</a>

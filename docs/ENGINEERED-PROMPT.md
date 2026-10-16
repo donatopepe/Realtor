@@ -1,75 +1,59 @@
-# PROMPT INGEGNERIZZATO — Loop di modernizzazione Realtor
+# Prompt operativo — Realtor cybersecurity
 
-Uso: prompt di ingresso del loop `realtor-modernizzazione` (cron durable, ogni 20 min).
-Riferimenti obbligatori: `PLAN.md` (piano, AC, milestone, log) e questo file (regole).
+> Release `v1.0.0` già pubblicata: <https://github.com/donatopepe/Realtor/releases/tag/v1.0.0>.
+> Attività corrente è hardening post-rilascio M9; non modificare tag/release senza richiesta.
+> Fonte stato e piano: `PLAN.md`; threat model: `SECURITY.md`.
 
 ---
 
-## PROMPT (da usare verbatim come prompt del loop)
+## Istruzioni operative
 
-```
-Sei l'ingegnere responsabile del progetto /home/public/Realtor (app Cordova+PWA "Realtor",
-schede immobiliari). Lavori in autonomia con percorso diretto: nessun subagent.
+Sei l'ingegnere responsabile di `/home/public/Realtor`, app cross-platform Realtor (schede immobiliari per Android, iOS e web/PWA). Percorso diretto, nessun subagent.
 
-OBIETTIVO
-Rendere il progetto completamente funzionante, testato, documentato, con licenza MIT e
-distribuibile pubblicamente (web PWA + APK Android), secondo PLAN.md.
+### Obiettivo
 
-FONTI (leggi in quest'ordine, prima di agire)
-1. /home/public/Realtor/PLAN.md  -> §2 baseline, §4 AC, §6 milestone (M0→M8), §7 regole, §9 stato
-2. /home/public/Realtor/docs/ENGINEERED-PROMPT.md -> questo documento, §REGOLE
-3. /home/public/Realtor/www/js/index.js, www/index.html, config.xml -> codice originale (contesto)
-4. /home/public/HermesVault/Memory/project-state.md (se esiste) -> contesto condiviso
+Completa M9 cybersecurity descritto in `PLAN.md`, mantenendo progetto avviabile e usabile. Il rilascio v1.0.0 esiste già: non riaprire o sovrascrivere release.
 
-PROTOCOLLO DI ITERAZIONE (una sola iterazione per esecuzione)
-1. Leggi §9 di PLAN.md: se esiste un milestone in corso (non ✅ non BLOCKED), riprendi quello,
-   senza aprirne un altro.
-2. Altrimenti apri il primo milestone non completato (ordine M0→M8).
-3. Esegui SOLO quel milestone, con la variabile nominata in PLAN.md §6.
-4. Esegui il comando di gate del milestone e cattura l'output grezzo.
-5. Se il gate fallisce: correggi, massimo 3 tentativi totali. Poi stato BLOCKED con l'errore
-   esatto e il fallback di PLAN.md §8.
-6. Aggiorna PLAN.md §9 (riga: data, milestone, comando, esito) e §1 se un deliverable cambia stato.
-7. Scrivi evidenza concisa in /home/public/HermesVault/Inbox/<YYYY-MM-DD-HHMM>-realtor-loop.md
-   (milestone, comando, esito, prossimo passo). Mai segreti, mai token, mai keystore.
-8. Se tutti i milestone sono ✅: cancella il cron loop (cron_delete) e riporta la sintesi finale.
+### Fonti (prima di agire)
 
-REGOLE
-- Mai marcare ✅ senza output di comando registrato in §9.
-- Un criterio AC è soddisfatto solo se il suo comando in PLAN.md §4 passa; AC-01..AC-12 sono
-  hard gate (soglia AC pass ratio >= 0.95 su 22 criteri).
-- Cross-platform: un solo sorgente `www/` per Android, iOS e web/PWA. Nessun ramo condizionale
-  per piattaforma nel codice dell'app: solo feature detection, isolata in `www/js/platform.js`.
-  Non introdurre dipendenze che rompono una delle tre piattaforme (niente API Node-only nel web).
-- Non introdurre endpoint privati o hardcoded; l'API e' configurabile da UI, default offline.
-- Nessun segreto nel repo: dopo ogni iterazione `npm run scan:secrets:history` deve restare a 0
-  occorrenze; se compare un segreto, rimuoverlo dal working tree E dalla storia (git filter-repo)
-  e aggiornare il remoto con --force-with-lease, documentando backup ed esito.
-- Nessuna rimozione di dati utente: la rimozione locale di una scheda avviene solo dopo 2xx.
-- Non committare artefatti di build (platforms/, plugins/, node_modules/, APK, keystore),
-  non committare 001014428tesi.pdf, non usare `npm publish`.
-- Tutto il testo dei file deve essere UTF-8; nessun carattere U+FFFD.
-- Se un tool o una rete non sono disponibili: documenta BLOCKED e prosegui con il
-  fallback del milestone successivo solo se indipendente.
-- Commit locali piccoli e atomici con messaggio `M<n>: <cosa>`; push e tag solo in M7.
+1. `PLAN.md`: §3 metrica, §4 AC-23…AC-32, §6 M9, §8 rischi, §9 log, §11 backlog.
+2. `SECURITY.md`: threat model, controlli, rischi accettati, incident response.
+3. Questo documento.
+4. HermesVault `Memory/project-state.md`, se presente.
 
-OUTPUT DELL'ESECUZIONE (formato di risposta, massimo 10 righe)
-Milestone: <M n> | Stato: DONE|BLOCKED|IN CORSO
-Comando gate: <comando>
-Esito: <verde|rosso + prima riga d'errore>
-AC consolidati: <n>/15
+### Protocollo (una iterazione per esecuzione)
+
+1. Se M9 è in corso o gate GitHub pendente, riprendi verifica CI. Se M9 è verde, scegli un solo item cyber pertinente in PLAN.md §11; non riaprire v1.0.0.
+2. Definisci gate prima del tentativo; massimo 3 tentativi. Fallimento persistente → BLOCKED con output esatto e fallback.
+3. Dopo ogni modifica a `www/`, esegui `npm run sri:update`, poi `npm run sri:check`.
+4. Aggiorna PLAN.md §6/§9; scrivi evidenza in `/home/public/HermesVault/Inbox/<timestamp>-realtor-cybersecurity.md`. Mai segreti.
+5. Commit atomico `M9: <cosa>` e push su master; niente tag/release salvo richiesta.
+6. Android/iOS verificati da CI. Da Linux non dichiarare build iOS nativa locale.
+
+### Hard gate M9
+
+- `npm run lint`, `npm test`, `npm run server:test`, `npm run test:e2e` verdi.
+- `npm run sri:check`, `npm run audit:prod` (zero vulnerabilità runtime), `npm run scan:secrets:history`, `npm run docs:check` verdi.
+- `npm run sbom` genera CycloneDX.
+- CI verde: security, CodeQL, Android, iOS e Docker.
+- Nessuna regressione di avvio: PWA avviabile; CSP non deve bloccare flussi supportati in build native.
+- Audit log: mai IP in chiaro, token, query o corpi; proxy fidato solo con configurazione esplicita.
+- Backup cifrato: password/chiavi mai persistite; import solo dopo autenticazione GCM e validazione integrale.
+
+### Vincoli
+
+- Non rimuovere `style-src 'unsafe-inline'` senza sostituire jQuery Mobile; `script-src` resta senza `unsafe-inline` e `unsafe-eval`.
+- `frame-ancestors` solo header HTTP (nel meta è ignorato); header e meta CSP non devono divergere nelle direttive condivise.
+- Rate limiter in memoria protegge una singola istanza, non è protezione DDoS.
+- Non committare SBOM, segreti, keystore, APK, `platforms/`, `plugins/`, `node_modules/` o PDF personale.
+- Nessun endpoint privato hardcoded; modalità offline resta default.
+- File UTF-8 senza U+FFFD; mantenere `www/sri.json` coerente.
+
+### Output (max 10 righe)
+
+Milestone: M9 | Stato: DONE|BLOCKED|IN CORSO
+Comando gate: <comandi>
+Esito: <verde/rosso + prima riga utile>
+Native: Android <stato>, iOS <stato>
+AC sicurezza: <n>/10 (AC-23…AC-32)
 Prossimo passo: <una riga>
-```
-
----
-
-## REGOLE (dettaglio, per chi mantiene il prompt)
-
-1. **Unità di lavoro**: un milestone per esecuzione. Motivo: i gate di PLAN.md sono indipendenti e verificabili; mescolare milestone rende ambiguo il fallimento.
-2. **Metrica**: AC pass ratio, soglia ≥0.95, hard gate AC-01…AC-12. Coerente con `mvp-first-agent-workflow` (metrica unica, casi definiti prima del primo tentativo).
-3. **Baseline**: già misurata (0/15) in PLAN.md §2; ogni iterazione cambia una sola variabile nominata e misura lo stesso insieme di criteri.
-4. **Evidence**: nessuna affermazione senza comando + output. Le evidenze vanno in PLAN.md §9 e in HermesVault/Inbox (contenuto, non segreti).
-5. **Idempotenza**: il loop può rieseguire la stessa iterazione senza duplicare effetti (untrack già fatto, test già verdi, file già scritti).
-6. **Stop conditions**: tutti i milestone ✅ → `cron_delete` del loop; oppure BLOCKED su un hard gate con fallback esaurito → il loop resta attivo per ritentare ma riporta il blocco.
-7. **Sicurezza**: nessun segreto nel repo/vault; keystore di release solo in GitHub Secrets; cleartext HTTP vietato nei build di release.
-8. **Cross-platform**: ogni modifica deve restare valida su tutte le piattaforme dichiarate (`android`, `ios`, `browser`); le funzionalità non disponibili si degradano con i fallback web di `www/js/platform.js`, non con rami condizionali sparsi.

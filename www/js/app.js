@@ -11,6 +11,7 @@
  */
 
 import { createApiClient } from './core/api.js';
+import { decryptText, encryptText, isEncryptedEnvelope, MIN_PASSWORD_LENGTH } from './core/crypto.js';
 import { createBackup } from './core/backup.js';
 import { migrateLegacy } from './core/migration.js';
 import { createSettingsStore } from './core/settings.js';
@@ -252,6 +253,7 @@ export function createApp({
   function fillSettingsForm() {
     const current = settings.get();
     $('#txtApiUrl').val(current.apiBaseUrl);
+    $('#txtPassword').val(''); // la password non resta nel form
     setStatus(settingsStatus(current));
     return current;
   }
@@ -266,12 +268,14 @@ export function createApp({
     try {
       const saved = settings.save({ apiBaseUrl: $('#txtApiUrl').val() });
       api.setBaseUrl(saved.apiBaseUrl);
+      $('#txtPassword').val(''); // la password non resta nel DOM
       updateOnlineState();
       setStatus(settingsStatus(saved));
       platform.alert('Impostazioni salvate!', 'Informazione');
       return saved;
     } catch (error) {
       logger.error('Impostazioni non valide', error);
+      $('#txtPassword').val(''); // non trattenere il segreto neppure in caso di errore
       platform.alert(validationMessage(error), 'Impostazioni non valide');
       return null;
     }
@@ -280,9 +284,9 @@ export function createApp({
   // ---------------------------------------------------------------- backup --
 
   /** Nome file proposto per il backup. */
-  function backupFileName(date = new Date()) {
+  function backupFileName(date = new Date(), prefix = 'realtor-backup') {
     const stamp = date.toISOString().slice(0, 10);
-    return `realtor-backup-${stamp}.json`;
+    return `${prefix}-${stamp}.json`;
   }
 
   /** Esporta le schede nel campo di testo (e tenta il download). */
@@ -294,8 +298,13 @@ export function createApp({
     return json;
   }
 
-  /** Tenta il download del file; `false` se l'ambiente non lo consente. */
-  function downloadBackup(json, date = new Date()) {
+  /**
+   * Tenta il download del file; `false` se l'ambiente non lo consente.
+   * @param {string} json
+   * @param {Date} [date]
+   * @param {string} [fileName]
+   */
+  function downloadBackup(json, date = new Date(), fileName = backupFileName(date)) {
     const doc = win && win.document;
     const BlobImpl = win && win.Blob;
     const urlImpl = win && win.URL;
@@ -312,7 +321,7 @@ export function createApp({
       const url = urlImpl.createObjectURL(new BlobImpl([json], { type: 'application/json' }));
       const anchor = doc.createElement('a');
       anchor.href = url;
-      anchor.download = backupFileName(date);
+      anchor.download = fileName;
       doc.body.appendChild(anchor);
       anchor.click();
       doc.body.removeChild(anchor);
@@ -328,8 +337,8 @@ export function createApp({
    * Importa il backup incollato nel campo di testo.
    * @param {{mode?:'merge'|'replace'}} [options]
    */
-  async function importBackup({ mode = 'merge' } = {}) {
-    const text = $('#txtBackup').val();
+  async function importBackup({ mode = 'merge', text: providedText } = {}) {
+    const text = providedText === undefined ? $('#txtBackup').val() : providedText;
     if (!text || String(text).trim() === '') {
       platform.alert('Incolla un backup nel campo di testo, oppure esportane uno prima.', 'Informazione');
       return null;
@@ -383,6 +392,71 @@ export function createApp({
     return report;
   }
 
+  // -------------------------------------------------------- backup cifrato --
+
+  /** Legge la password dal campo dedicato (mai persistita). */
+  function readPassword() {
+    const $field = $('#txtPassword');
+    return $field && typeof $field.val === 'function' ? String($field.val() || '') : '';
+  }
+
+  /** Esporta un backup cifrato con password (AES-256-GCM + PBKDF2-SHA256). */
+  async function exportEncryptedBackup({ download = true } = {}) {
+    const password = readPassword();
+    if (password.length < MIN_PASSWORD_LENGTH) {
+      platform.alert(`Indica una password di almeno ${MIN_PASSWORD_LENGTH} caratteri.`, 'Password richiesta');
+      return null;
+    }
+
+    try {
+      const envelope = await encryptText(backup.toJson(), password);
+      const json = JSON.stringify(envelope, null, 2);
+      $('#txtBackup').val(json);
+      const saved = download ? downloadBackup(json, new Date(), backupFileName(new Date(), 'realtor-backup-cifrato')) : false;
+      setStatus(`Backup cifrato di ${store.count()} schede pronto${saved ? ' (file scaricato)' : ''}.`);
+      platform.alert(
+        'Backup cifrato creato. Conserva la password: senza di essa il file non è recuperabile.',
+        'Informazione',
+      );
+      return envelope;
+    } catch (error) {
+      logger.error('Cifratura del backup non riuscita', error);
+      platform.alert(error.message || 'Cifratura non riuscita.', 'Errore');
+      return null;
+    }
+  }
+
+  /**
+   * Importa un backup cifrato: decifra e riusa il percorso di importazione già
+   * validato (`importBackup`), quindi nessun dato viene scritto prima dei controlli.
+   */
+  async function importEncryptedBackup({ mode = 'merge' } = {}) {
+    const text = $('#txtBackup').val();
+    const password = readPassword();
+
+    if (!isEncryptedEnvelope(text)) {
+      platform.alert('Nel campo non c\u2019\u00e8 un backup cifrato: incolla un file creato con "Esporta cifrato".', 'Informazione');
+      return null;
+    }
+    if (password === '') {
+      platform.alert('Indica la password usata per cifrare il backup.', 'Password richiesta');
+      return null;
+    }
+
+    let plain;
+    try {
+      plain = await decryptText(text, password);
+    } catch (error) {
+      logger.error('Decifratura del backup non riuscita', error);
+      platform.alert(
+        error.code === 'wrong_password' ? 'Password errata o file danneggiato.' : error.message,
+        'Decifratura non riuscita',
+      );
+      return null;
+    }
+    return importBackup({ mode, text: plain });
+  }
+
   // ------------------------------------------------------------------- UI --
 
   /** Nasconde i comandi non disponibili sulla piattaforma corrente. */
@@ -433,6 +507,8 @@ export function createApp({
     bindActivate($('#btnEsportaBackup'), () => exportBackup({ download: true }));
     bindActivate($('#btnImportaBackup'), () => importBackup({ mode: 'merge' }));
     bindActivate($('#btnImportaSostituisci'), () => importBackup({ mode: 'replace' }));
+    bindActivate($('#btnEsportaCifrato'), () => exportEncryptedBackup());
+    bindActivate($('#btnImportaCifrato'), () => importEncryptedBackup());
     bindActivate($('#btnMigraLegacy'), () => migrateNow());
 
     platform.on('online', updateOnlineState);
@@ -499,6 +575,9 @@ export function createApp({
     exportBackup,
     downloadBackup,
     importBackup,
+    exportEncryptedBackup,
+    importEncryptedBackup,
+    readPassword,
     migrateNow,
     runStartupMigration,
     registerServiceWorker,

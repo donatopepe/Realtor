@@ -29,6 +29,13 @@ import { resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 import { normalizeCard, validateCard } from '../../www/js/core/schema.js';
+import {
+  apiSecurityHeaders,
+  clientKey,
+  createAuditLog,
+  createRateLimiter,
+  isSecureRequest,
+} from './security.js';
 import { createFileStore, createMemoryStore } from './store.js';
 
 /** Percorso dell'endpoint delle schede (contratto pubblico). */
@@ -42,6 +49,12 @@ export const SERVER_VERSION = '1.0.0';
 
 /** Limite predefinito del corpo: 1 MiB. */
 export const DEFAULT_MAX_BODY_BYTES = 1024 * 1024;
+
+/** Numero massimo di schede accettate in una singola richiesta. */
+export const DEFAULT_MAX_CARDS_PER_REQUEST = 500;
+
+/** Limite di richieste predefinito per finestra (per origine). */
+export const DEFAULT_RATE_LIMIT = Object.freeze({ windowMs: 60000, max: 120 });
 
 const JSON_HEADERS = { 'Content-Type': 'application/json; charset=utf-8' };
 
@@ -108,6 +121,9 @@ export function createApiServer({
   token = '',
   corsOrigin = '*',
   maxBodyBytes = DEFAULT_MAX_BODY_BYTES,
+  maxCardsPerRequest = DEFAULT_MAX_CARDS_PER_REQUEST,
+  rateLimit = DEFAULT_RATE_LIMIT,
+  trustProxy = false,
   logger = null,
   version = SERVER_VERSION,
   startedAt = Date.now(),
@@ -116,13 +132,16 @@ export function createApiServer({
     throw new TypeError('createApiServer: serve uno store (vedi createMemoryStore/createFileStore).');
   }
 
+  const limiter = createRateLimiter(rateLimit);
+  const audit = createAuditLog({ logger: logger && typeof logger.info === 'function' ? logger : null });
+
   function send(response, status, payload, extraHeaders = {}) {
+    const request = response.req;
     const body = payload === undefined ? '' : JSON.stringify(payload);
     response.writeHead(status, {
       ...JSON_HEADERS,
       'Content-Length': Buffer.byteLength(body),
-      'Cache-Control': 'no-store',
-      'X-Content-Type-Options': 'nosniff',
+      ...apiSecurityHeaders({ https: isSecureRequest(request, { trustProxy }) }),
       'Access-Control-Allow-Origin': corsOrigin,
       Vary: 'Origin',
       ...extraHeaders,
@@ -134,8 +153,13 @@ export function createApiServer({
     response.end(body);
   }
 
-  function sendError(response, status, code, message, details) {
-    send(response, status, details === undefined ? { error: code, message } : { error: code, message, details });
+  function sendError(response, status, code, message, details, extraHeaders = {}) {
+    send(
+      response,
+      status,
+      details === undefined ? { error: code, message } : { error: code, message, details },
+      extraHeaders,
+    );
   }
 
   function authorized(request) {
@@ -147,12 +171,36 @@ export function createApiServer({
 
   async function handle(request, response) {
     const started = Date.now();
+    const client = clientKey(request, { trustProxy });
+    const counters = { cards: undefined, invalid: undefined };
     response.on('finish', () => {
-      logger?.info?.(`${response.statusCode} ${request.method} ${request.url} (${Date.now() - started} ms)`);
+      audit.write({
+        method: request.method,
+        path: url.pathname,
+        status: response.statusCode,
+        durationMs: Date.now() - started,
+        client,
+        cards: counters.cards,
+        invalid: counters.invalid,
+      });
     });
 
     const url = new URL(request.url, 'http://localhost');
     const path = url.pathname.replace(/\/+$/, '') || '/';
+
+    // Il preflight CORS non consuma il budget di richieste: è generato dal
+    // browser e non trasporta dati.
+    if (request.method !== 'OPTIONS') {
+      const verdict = limiter.check(client);
+      response.setHeader('X-RateLimit-Limit', String(rateLimit.max));
+      response.setHeader('X-RateLimit-Remaining', String(verdict.remaining));
+      if (!verdict.allowed) {
+        sendError(response, 429, 'too_many_requests', 'Troppe richieste: riprova più tardi.', undefined, {
+          'Retry-After': String(verdict.retryAfterSeconds),
+        });
+        return;
+      }
+    }
 
     if (request.method === 'OPTIONS') {
       send(response, 204, undefined, {
@@ -228,6 +276,15 @@ export function createApiServer({
         sendError(response, 400, 'invalid_payload', 'Atteso un elenco di schede o un oggetto scheda.');
         return;
       }
+      if (extracted.length > maxCardsPerRequest) {
+        sendError(
+          response,
+          413,
+          'too_many_cards',
+          `Massimo ${maxCardsPerRequest} schede per richiesta (ricevute ${extracted.length}).`,
+        );
+        return;
+      }
 
       const valid = [];
       const errors = [];
@@ -243,6 +300,8 @@ export function createApiServer({
         return;
       }
 
+      counters.cards = valid.length;
+      counters.invalid = errors.length;
       const { created, updated } = store.upsert(valid);
       send(response, 201, {
         received: extracted.length,
@@ -259,13 +318,27 @@ export function createApiServer({
     sendError(response, 404, 'not_found', `Percorso non trovato: ${path}`);
   }
 
-  return createServer((request, response) => {
+  const server = createServer((request, response) => {
     handle(request, response).catch((error) => {
-      logger?.error?.(`errore interno: ${error.message}`);
+      audit.write({
+        method: request.method,
+        path: new URL(request.url, 'http://localhost').pathname,
+        status: 500,
+        durationMs: 0,
+        client: clientKey(request, { trustProxy }),
+        message: error.message,
+      });
       if (!response.headersSent) sendError(response, 500, 'internal_error', 'Errore interno del server.');
       else response.end();
     });
   });
+
+  // Difese contro richieste lente/abusive (slowloris) e header abnormi.
+  server.headersTimeout = 20000;
+  server.requestTimeout = 30000;
+  server.keepAliveTimeout = 5000;
+  server.maxHeadersCount = 100;
+  return server;
 }
 
 const USAGE = `Uso: node server/src/server.js [opzioni]
@@ -277,6 +350,8 @@ const USAGE = `Uso: node server/src/server.js [opzioni]
       --memory               archivio in memoria (nessuna scrittura su disco)
       --token <segreto>      richiede Authorization: Bearer <segreto>
       --cors <origine>       Access-Control-Allow-Origin (default *)
+      --trust-proxy          considera x-forwarded-for/-proto (solo dietro proxy fidato)
+      --rate-limit <numero>  richieste per finestra e per origine (default 120)
   -q, --quiet                nessun log per richiesta
   -h, --help                 mostra questo aiuto`;
 
@@ -290,6 +365,10 @@ export function parseArgs(argv) {
     token: process.env.REALTOR_API_TOKEN || '',
     cors: process.env.REALTOR_CORS_ORIGIN || '*',
     maxBodyBytes: Number(process.env.REALTOR_MAX_BODY_BYTES || DEFAULT_MAX_BODY_BYTES),
+    maxCardsPerRequest: Number(process.env.REALTOR_MAX_CARDS || DEFAULT_MAX_CARDS_PER_REQUEST),
+    rateLimitMax: Number(process.env.REALTOR_RATE_LIMIT_MAX || DEFAULT_RATE_LIMIT.max),
+    rateLimitWindowMs: Number(process.env.REALTOR_RATE_LIMIT_WINDOW_MS || DEFAULT_RATE_LIMIT.windowMs),
+    trustProxy: process.env.REALTOR_TRUST_PROXY === '1' || process.env.REALTOR_TRUST_PROXY === 'true',
     quiet: false,
   };
   for (let index = 0; index < argv.length; index += 1) {
@@ -301,6 +380,8 @@ export function parseArgs(argv) {
     else if (arg === '--memory') options.memory = true;
     else if (arg === '--token') options.token = String(argv[++index]);
     else if (arg === '--cors') options.cors = String(argv[++index]);
+    else if (arg === '--trust-proxy') options.trustProxy = true;
+    else if (arg === '--rate-limit') options.rateLimitMax = Number(argv[++index]);
     else if (arg === '--quiet' || arg === '-q') options.quiet = true;
     else if (arg === '--help' || arg === '-h') options.help = true;
     else throw new Error(`Argomento non riconosciuto: ${arg}`);
@@ -346,6 +427,9 @@ if (isMain()) {
     token: options.token,
     corsOrigin: options.cors,
     maxBodyBytes: options.maxBodyBytes,
+    maxCardsPerRequest: options.maxCardsPerRequest,
+    rateLimit: { windowMs: options.rateLimitWindowMs, max: options.rateLimitMax },
+    trustProxy: options.trustProxy,
     logger: options.quiet ? null : console,
   });
 
@@ -363,6 +447,18 @@ if (isMain()) {
     console.log(`  archivio: ${store.kind === 'file' ? store.file : 'in memoria'}`);
     console.log(`  token:    ${options.token === '' ? 'non richiesto' : 'richiesto (Bearer)'}`);
     console.log(`  endpoint: ${API_PATH}  ·  health: ${HEALTH_PATH}`);
+    console.log(`  limiti:   ${options.rateLimitMax} richieste/${Math.round(options.rateLimitWindowMs / 1000)}s per origine · max ${options.maxCardsPerRequest} schede/richiesta`);
+
+    const publicBind = !['127.0.0.1', 'localhost', '::1'].includes(options.host);
+    if (publicBind && options.token === '') {
+      console.warn('[realtor-api] ATTENZIONE: server raggiungibile da rete senza token (REALTOR_API_TOKEN).');
+    }
+    if (publicBind && options.cors === '*') {
+      console.warn('[realtor-api] ATTENZIONE: CORS su qualsiasi origine; imposta REALTOR_CORS_ORIGIN in produzione.');
+    }
+    if (publicBind && options.trustProxy) {
+      console.log('[realtor-api] proxy fidato: x-forwarded-for/proto usati per origine e scheme.');
+    }
   });
 
   for (const signal of ['SIGINT', 'SIGTERM']) {

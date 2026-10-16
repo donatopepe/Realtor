@@ -32,7 +32,7 @@ export default [
     languageOptions: {
       ecmaVersion: 2023,
       sourceType: 'module',
-      globals: { ...globals.browser, $: 'readonly', jQuery: 'readonly' },
+      globals: { ...globals.browser, $: 'readonly' },
     },
   },
 

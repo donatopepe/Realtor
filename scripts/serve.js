@@ -66,13 +66,77 @@ export const CORDOVA_SHIM = `/* Realtor — shim di cordova.js per il browser.
  */
 `;
 
+/**
+ * Policy CSP usata sia come header HTTP sia (identica) nel meta di `index.html`.
+ * `style-src 'unsafe-inline'` è richiesto da jQuery Mobile, che applica stili
+ * inline a runtime; gli script restano invece vincolati a `'self'`.
+ */
+/** Direttive valide sia come header sia come meta. */
+const BASE_DIRECTIVES = [
+  "default-src 'self'",
+  "script-src 'self'",
+  // jQuery Mobile applica stili inline a runtime.
+  "style-src 'self' 'unsafe-inline'",
+  "img-src 'self' data:",
+  "font-src 'self' data:",
+  // L'endpoint REST è scelto dall'utente: si consente http/https, non altri schemi.
+  "connect-src 'self' http: https:",
+  "object-src 'none'",
+  // `'self'` invece di `'none'`: jQuery Mobile imposta una base URI per la
+  // navigazione hash, ma resta vincolata all'origine (niente dirottamenti).
+  "base-uri 'self'",
+  "form-action 'none'",
+  "worker-src 'self'",
+  "manifest-src 'self'",
+];
+
+/** Policy completa, usata come header HTTP. */
+export const CONTENT_SECURITY_POLICY = [...BASE_DIRECTIVES, "frame-ancestors 'none'"].join('; ');
+
+/**
+ * Policy per il `meta` di `index.html`: identica all'header tranne
+ * `frame-ancestors`, che i browser ignorano quando arriva via meta.
+ */
+export const CONTENT_SECURITY_POLICY_META = BASE_DIRECTIVES.join('; ');
+
+/**
+ * Header di sicurezza applicati a ogni risposta del server statico.
+ * `Strict-Transport-Security` è incluso solo quando la connessione è HTTPS.
+ * @param {{https?:boolean}} [options]
+ */
+export function securityHeaders({ https = false } = {}) {
+  const headers = {
+    'Content-Security-Policy': CONTENT_SECURITY_POLICY,
+    'X-Content-Type-Options': 'nosniff',
+    'X-Frame-Options': 'DENY',
+    'Referrer-Policy': 'no-referrer',
+    'Permissions-Policy': 'geolocation=(), camera=(), microphone=(), payment=(), usb=()',
+    'Cross-Origin-Opener-Policy': 'same-origin',
+    'Cross-Origin-Resource-Policy': 'same-origin',
+  };
+  if (https) headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains';
+  return headers;
+}
+
 function sendBody(response, status, headers, body) {
-  response.writeHead(status, { 'X-Content-Type-Options': 'nosniff', ...headers });
+  response.writeHead(status, { ...securityHeaders({ https: isSecureRequest(response.req) }), ...headers });
   if (response.req.method === 'HEAD') {
     response.end();
     return;
   }
   response.end(body);
+}
+
+/** `true` se la richiesta arriva su HTTPS (diretto o dietro proxy fidato). */
+function isSecureRequest(request) {
+  if (!request) return false;
+  if (request.socket && request.socket.encrypted) return true;
+  const forwarded = String(request.headers?.['x-forwarded-proto'] || '').split(',')[0].trim();
+  return forwardCSV(forwarded);
+}
+
+function forwardCSV(value) {
+  return value === 'https';
 }
 
 function sendText(response, status, type, text) {
@@ -128,10 +192,10 @@ export function createStaticServer({
     const info = await stat(target).catch(() => null);
     if (info && info.isFile()) {
       response.writeHead(200, {
+        ...securityHeaders({ https: isSecureRequest(request) }),
         'Content-Type': mimeFor(target),
         'Content-Length': info.size,
         'Cache-Control': cache ? 'public, max-age=3600' : 'no-store',
-        'X-Content-Type-Options': 'nosniff',
       });
       if (request.method === 'HEAD') {
         response.end();
@@ -151,10 +215,10 @@ export function createStaticServer({
       const indexInfo = await stat(indexFile).catch(() => null);
       if (indexInfo && indexInfo.isFile()) {
         response.writeHead(200, {
+          ...securityHeaders({ https: isSecureRequest(request) }),
           'Content-Type': MIME_TYPES['.html'],
           'Content-Length': indexInfo.size,
           'Cache-Control': 'no-store',
-          'X-Content-Type-Options': 'nosniff',
         });
         if (request.method === 'HEAD') {
           response.end();

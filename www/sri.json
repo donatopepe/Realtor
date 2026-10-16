@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "algorithm": "sha384",
+  "note": "Hash dei file dell'app shell. Rigenerare con: npm run sri:update",
+  "files": {
+    "css/index.css": "sha384-jdkQ6Z99tkXLR/FBvGTnn+kn03eXPniamrISCUEq+RC6eZ2/lGs9Un9igu6XlmN3",
+    "index.html": "sha384-yXnw8AEktwBVof3A4acSSC1EinlAhI7ekuMtuLOVJfLjWOzdeVkPVWBkTMNatNku",
+    "js/app.js": "sha384-JAboucWNBYekKmPGDKNbDX6iO/TUQg3T9rJTz3Pc8s9f+PgqLqq7U3+iAkazt6Yf",
+    "js/core/api.js": "sha384-qzPZeSV01GyXAZLa2mK9PvZX/NJY1QmVbF47JUJ1kiXO7YNHZakYj1E7+11Bt4RO",
+    "js/core/backup.js": "sha384-Y3mM+C2VqLGrYS+l+Jp1hsCINK8LlQo88TxycoVr98kabsJO9v/mYU5VTZHUqcCX",
+    "js/core/crypto.js": "sha384-sL7xDtp81wjN8WAL2Lu0J8H2WL7O/O+zNRg8lJ4imSZTc3eQtQ1FjhyDdxkCkNni",
+    "js/core/migration.js": "sha384-DAOZ2AEgH5WF6mrS9lS46Z5lenjpVDtrvH6f/UvakQpN2OSZuCs2phopUfPFS2c7",
+    "js/core/schema.js": "sha384-yhutf/fAdosV9/Mvm2IZpWUot52QpoujRfs8ZHQJQx9WqW3h7ECUHag/KszIryRN",
+    "js/core/settings.js": "sha384-qj/UuiPuidjApZtA4AVQmojW/jycL6jp68Lyw2R8xim13v8R9xsAE/2bN/sfwCwX",
+    "js/core/storage.js": "sha384-hj0GARxmVXDiW8LDNTs8hok11cIw7WsF5MogL1nLqrGBM78cebcGgJ+1biMHpiYH",
+    "js/jquery/jquery-2.1.0.min.js": "sha384-85/BFduEdDxQ86xztyNu4BBkVZmlvu+iB7zhBu0VoYdq+ODs3PKpU6iVE3ZqPMut",
+    "js/jquery/jquery.mobile-1.4.2.min.css": "sha384-V5gGl4e/GbXchBOoRHg1m9VCR+l0kAzqqlFj1aZypPOCKFghRiTxVUjpsgw//Set",
+    "js/jquery/jquery.mobile-1.4.2.min.js": "sha384-+cwfhukiPBACFZGK7h+cw8ISO+LiwOAVcfl8l8ob3s6k31eOis0n5WEsHjYUirE8",
+    "js/mobileinit.js": "sha384-ulde18jYwqbWNZ12+VF8/THj0KiPOFOawoG0oVCHFHK3WDaGesDln/G/Jo1Slh0j",
+    "js/platform.js": "sha384-dGxYVlkrCglM4HgEvsICXOlHtVaywbqCkSrkbTUGCcIQ6JDW3oHQ4V1MKZoU9aVb",
+    "manifest.webmanifest": "sha384-WzST3kPlk2UBtgNbXA9z+Xc4VrGhuYB8hE271ccA03fi/NKu1Hy7yEyTcguPNzdp",
+    "sw.js": "sha384-XxtqTFqojnipimBAvOmpAo7YSdz7Ckw/AAgOcG7MjqPwrXzypPHmP32yo+uqXOZS"
+  }
+}

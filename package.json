@@ -50,7 +50,12 @@
     "build:android": "cordova build android",
     "build:android:release": "cordova build android --release",
     "build:ios": "cordova build ios",
-    "e2e": "playwright test"
+    "e2e": "playwright test",
+    "sri:check": "node scripts/sri.js --check",
+    "sri:update": "node scripts/sri.js --update",
+    "audit:prod": "npm audit --omit=dev --audit-level=high",
+    "audit:report": "npm audit --audit-level=high",
+    "sbom": "npm sbom --sbom-format cyclonedx > sbom.cdx.json"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
