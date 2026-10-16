@@ -14,14 +14,14 @@ env:
 
 jobs:
   quality:
-    name: Lint, segreti, documentazione, test
+    name: Lint, segreti, integrità, documentazione, test
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           fetch-depth: 0 # la scansione dei segreti controlla anche la storia
 
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
@@ -34,19 +34,85 @@ jobs:
       - name: Nessun segreto in working tree e storia
         run: npm run scan:secrets:history
 
+      - name: Integrità dei file dell'app (SRI)
+        run: npm run sri:check
+
+      - name: Audit dipendenze runtime
+        run: npm run audit:prod
+
       - name: Documentazione coerente
         run: npm run docs:check
 
       - name: Test unitari e di integrazione
         run: npm test
 
+      - name: SBOM CycloneDX
+        run: npm run sbom
+
+      - name: Audit completo dipendenze (runtime + toolchain)
+        run: npm run audit:report
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: sbom-cyclonedx
+          path: sbom.cdx.json
+          retention-days: 30
+
+  security:
+    name: Audit completo dipendenze e SBOM
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - run: npm ci
+
+      - name: Vulnerabilità delle dipendenze di produzione (bloccante)
+        run: npm run audit:prod
+
+      - name: Report dipendenze toolchain (informativo)
+        continue-on-error: true
+        run: npm audit --omit=prod --audit-level=high
+
+  codeql:
+    name: CodeQL security scan
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+      actions: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Inizializza CodeQL
+        uses: github/codeql-action/init@ce5e7eeac396d720fe2d802714996c8ce561e311 # v3
+        with:
+          languages: javascript-typescript
+          queries: security-and-quality
+          config: |
+            paths-ignore:
+              - www/js/jquery
+              - node_modules
+              - platforms
+              - plugins
+              - docs/screenshots
+
+      - name: Analizza codice
+        uses: github/codeql-action/analyze@ce5e7eeac396d720fe2d802714996c8ce561e311 # v3
+        with:
+          category: '/language:javascript-typescript'
+
   e2e:
     name: End-to-end (desktop + mobile)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
@@ -61,7 +127,7 @@ jobs:
 
       - name: Report Playwright
         if: failure()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: playwright-report
           path: playwright-report
@@ -71,19 +137,19 @@ jobs:
     name: Build Android (APK)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
 
-      - uses: actions/setup-java@v6
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6
         with:
           distribution: temurin
           java-version: '17'
 
-      - uses: android-actions/setup-android@v4
+      - uses: android-actions/setup-android@be39fa834029ff78f1a44aa3bb0819b8fc2bd8fd # v4
 
       - name: Accetta le licenze e installa piattaforma e build-tools
         run: |
@@ -105,7 +171,7 @@ jobs:
           test -n "$APK"
           ls -lh "$APK"
 
-      - uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: realtor-apk-debug
           path: platforms/android/app/build/outputs/apk/debug/*.apk
@@ -115,9 +181,9 @@ jobs:
     name: Build iOS (simulatore)
     runs-on: macos-14
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
@@ -134,7 +200,7 @@ jobs:
     name: Immagine Docker del server
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Build dell'immagine
         run: docker build -f server/Dockerfile -t realtor-api:ci .

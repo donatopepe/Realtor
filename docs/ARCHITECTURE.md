@@ -48,7 +48,10 @@ salvi le schede sul dispositivo e le invii solo quando l'utente configura un end
    (`vclick` + `tap` + `click` con deduplica): funzionano con touch e con mouse.
 5. **Gli errori si vedono.** Ogni fallimento mostra un messaggio all'utente e viene registrato
    in console; nessuna eccezione silenziosa nelle operazioni di salvataggio/invio.
-6. **Nessun segreto nel repository.** Endpoint e token non sono mai cablati; la scansione
+6. **Sicurezza "by default".** CSP senza script inline, header di sicurezza su ogni risposta,
+   pinning SRI dei file dell'app, cifratura opzionale dei backup, rate limiting e audit log
+   pseudonimizzato lato server. Dettagli e verifiche in [SECURITY.md](../SECURITY.md).
+7. **Nessun segreto nel repository.** Endpoint e token non sono mai cablati; la scansione
    `scripts/scan-secrets.js` gira nei test su working tree e storia.
 
 ## Flussi principali
@@ -102,6 +105,9 @@ divergere. `server/src/store.js` offre archivio in memoria o su file con scrittu
 | End-to-end | `npm run test:e2e` | app reale su desktop e mobile, invio verso il server, offline |
 | Stile | `npm run lint` | app, service worker, server, script, test |
 | Documentazione | `npm run docs:check` | comandi e percorsi citati nei documenti |
-| Sicurezza | `npm run scan:secrets:history` | assenza di credenziali nel working tree e nella storia |
+| Sicurezza (segreti) | `npm run scan:secrets:history` | assenza di credenziali nel working tree e nella storia |
+| Sicurezza (integrità) | `npm run sri:check` | hash dei file dell'app shell invariati |
+| Sicurezza (dipendenze) | `npm run audit:prod` | nessuna vulnerabilità nelle dipendenze di produzione |
+| Sicurezza (offensiva) | `npm run test:e2e` | CSP attiva senza violazioni, payload XSS reso come testo, backup cifrato |
 
 La matrice di build e le pipeline sono in `.github/workflows/`.

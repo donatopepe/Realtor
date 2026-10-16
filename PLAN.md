@@ -16,6 +16,7 @@
 | D4 | Loop di lavorazione | ✅ creato (cron durable) | task `realtor-modernizzazione` |
 | D5 | Progetto corretto, testato, documentato, MIT, distribuibile | ✅ **completato** — M0…M8 ✅, AC 22/22 | milestone M0→M8 |
 | D8 | Rilascio pubblico 1.0.0 (web/PWA + Android APK, iOS pronto) | ✅ rilasciato | [github.com/donatopepe/Realtor/releases/tag/v1.0.0](https://github.com/donatopepe/Realtor/releases/tag/v1.0.0) |
+| D9 | **Cybersecurity**: threat model, hardening client e server, cifratura dei backup, supply chain e verifiche automatiche | ⏳ in corso (M9) | `SECURITY.md`, `www/js/core/crypto.js`, `server/src/security.js`, `scripts/sri.js`, `.github/workflows/codeql.yml` |
 | D6 | Cross-platform: stesso sorgente per **Android, iOS, web/PWA** (desktop Electron opzionale) | ✅ fondamenta (M2); build per piattaforma in M6 | `www/`, `config.xml`, `resources/`, `scripts/serve.js` |
 | D7 | Igiene dei segreti: nessuna credenziale nel working tree **né nella storia git**, con scansione automatica nei test | ✅ fatto (M2) | `scripts/scan-secrets.js`, `tests/unit/secrets.test.js` |
 
@@ -79,10 +80,11 @@ Ambiente verificato: Node `v26.11.1`, npm `12.2.0`, Java 17 + 27, `gradle` di si
 
 ## 3. Obiettivo e metrica (gate unico)
 
-**Obiettivo (una frase):** rendere Realtor un progetto **cross-platform** (Android, iOS, web/PWA) moderno, offline-first, senza perdita di dati, con API configurabile e server di riferimento, coperto da test automatici, documentato e rilasciabile con licenza MIT.
+**Obiettivo originale (completato con v1.0.0):** Realtor cross-platform, offline-first e distribuibile.
+**Obiettivo attuale:** hardening cybersecurity post-rilascio mantenendo app avviabile e usabile.
 
-**Metrica:** rapporto criteri di accettazione soddisfatti / criteri totali (`AC pass ratio`, 22 criteri).
-**Soglia:** ≥ **0.95** (≥ 21/22) con **AC-01…AC-12 obbligatori** (hard gate: se uno è rosso il progetto non è "funzionante").
+**Metrica M9:** AC-23…AC-32 verificati / 10.
+**Soglia:** 10/10 localmente e CI verde; M9 è post-release, non invalida retroattivamente v1.0.0.
 Nessun criterio può essere marcato ✅ senza comando di verifica eseguito e output registrato in §9.
 
 Criteri qualitativi di D5 (rubrica 0/1, prima del primo tentativo): funzionamento, test, documentazione, licenza, igiene repo, distribuibilità — tutti obbligatori.
@@ -115,6 +117,16 @@ Criteri qualitativi di D5 (rubrica 0/1, prima del primo tentativo): funzionament
 | AC-20 | `npm run serve`: MIME corretti (incl. `.webmanifest`), shim `cordova.js`, fallback SPA, path traversal bloccato | `npm test` (`serve.test.js`) |
 | AC-21 | CI multi-piattaforma: `ubuntu` (Android + web) e `macos` (iOS) verdi | `gh run list --limit 2` = success | ✅ run `38888682947` (android, ios, e2e, docker, quality)|
 | AC-22 | Nessun segreto nei file tracciati **né nella storia git**; scansione automatica | `npm test` (`secrets.test.js`) e `npm run scan:secrets:history` → 0 occorrenze |
+| AC-23 | CSP attiva senza violazioni nel browser; nessuno script inline | E2E `security.spec.js` + unit security |
+| AC-24 | Header di sicurezza su risposte statiche, HSTS solo HTTPS | E2E HTTP + unit `securityHeaders` |
+| AC-25 | Pinning SHA-384 dell’app shell | `npm run sri:check` |
+| AC-26 | Nessun sink DOM pericoloso; payload XSS reso come testo | Unit + E2E injection |
+| AC-27 | Rate limit per origine, 429/Retry-After, preflight esente, memoria limitata | `npm run server:test` |
+| AC-28 | Audit JSON con IP pseudonimizzato, senza token/query/body | `npm run server:test` |
+| AC-29 | Backup AES-256-GCM + PBKDF2; password errata e tampering rifiutati | Unit + E2E |
+| AC-30 | Limiti body/schede e timeout anti-slowloris | `npm run server:test` |
+| AC-31 | Audit runtime, SBOM, Dependabot, CodeQL, action SHA-pinned | audit + SBOM + CI security/CodeQL |
+| AC-32 | Threat model coerente con i controlli effettivi | `npm run docs:check` + review `SECURITY.md` |
 
 ---
 
@@ -168,6 +180,7 @@ Principi: logica core pura e iniettabile → testabile in Node senza device; `ww
 | M6 | **Cordova multi-piattaforma:** `cordova@13`, `cordova-android@15`, `cordova-ios@8` come devDependencies; plugin `cordova-plugin-dialogs` + `cordova-plugin-network-information` dichiarati in `config.xml` e in `package.json` (ripristinati automaticamente da `cordova platform add`); `config.xml` allineato a `targetSdk`/`compileSdk` 36 (richiesto da cordova-android 15), rimossa la preferenza `BackgroundColor` che rompeva il link delle risorse; piattaforma legacy Ant archiviata; `platforms/` + `plugins/` rigenerabili da zero; `cordova-browser` scartato (incompatibile con `"type": "module"`) con la PWA come piattaforma web | `npx cordova platform add android` da zero + `npx cordova build android --debug` → APK; `npm ci && npm test`; verifica del contenuto dell'APK (asset + plugin + firma) | AC-05, AC-18 | ✅ 2026-10-16 |
 | M7 | **Documentazione, lint e CI:** README completo (funzionalità, requisiti, avvio rapido, test, build, server, struttura, matrice piattaforme, troubleshooting, licenza) con gli screenshot di M5; `docs/ARCHITECTURE.md`, `docs/MIGRATION.md`, `docs/PUBLISHING.md`, `CONTRIBUTING.md`, `SECURITY.md`, `CODE_OF_CONDUCT.md`; ESLint 10 (flat config) su app, service worker, server, script e test; `scripts/docs-check.js` che verifica comandi/percorsi citati; GitHub Actions `ci.yml` (quality, e2e su Chromium, android con APK come artifact, ios su `macos-14` per simulatore, docker con health check) e `release.yml` su tag `v*` | `npm run lint` e `npm run docs:check` verdi; `gh run list` = success (5 job, ubuntu + macos) | AC-02, AC-11, AC-15, AC-21 | ✅ 2026-10-16 |
 | M8 | **Rilascio v1.0.0:** verifica finale completa (lint, 172 test, 39 E2E, docs:check, 0 segreti), `CHANGELOG.md` datato, tag annotato `v1.0.0`, workflow `release.yml` che pubblica il pacchetto web (`www/` in zip) e gli APK nella GitHub Release | `gh run list --limit 1` = success e `gh release view v1.0.0` con gli asset (zip web + APK) | AC-15, AC-21 | ✅ 2026-10-16 |
+| M9 | **Cybersecurity post-release:** CSP header/meta, header sicurezza, pinning SRI, backup cifrato AES-256-GCM/PBKDF2, rate limit e audit pseudonimizzato, limiti/timeout server, audit runtime, SBOM, Dependabot, CodeQL, action SHA-pinned, threat model | Gate locale: 207 test unit + 39 server + 53 E2E passati (1 skip), lint, SRI, audit prod, secrets, docs, SBOM | AC-23…AC-32 | ⏳ CI GitHub pending |
 
 Regola di gate: un milestone è ✅ solo con output grezzo dei comandi registrato in §9.
 
@@ -220,7 +233,7 @@ Regola di gate: un milestone è ✅ solo con output grezzo dei comandi registrat
 | 2026-10-16 | M5 | `npm run test:e2e` (2 progetti, 2 server reali) e `npm test`; `npm run test:coverage` | ✅ **DONE** | **39 E2E passati / 0 falliti** (19 scenari × desktop + mobile) e **170 test node**; service worker verificato end-to-end (registrazione, ricaricamento con rete disattivata, dati locali leggibili offline); screenshot generati (4 PNG, 1280×800); coverage `app.js` 90.09%, core ≥96%, totale 90.81%. **Due bug reali trovati e corretti dagli E2E:** (a) i comandi non rispondevano al mouse (solo `tap`); (b) dopo un invio riuscito un'eccezione della listview nascondeva la conferma `Schede inviate`. AC ✅: AC-03, AC-06, AC-16, AC-17 (**17/22**) |
 | 2026-10-16 | M6 | `sdkmanager "platforms;android-35" "build-tools;35.0.0"`; `npm i -D cordova cordova-android cordova-ios cordova-plugin-dialogs cordova-plugin-network-information`; `npx cordova platform add android` (da zero, dopo aver archiviato il `platforms/` Ant del 2014); `npx cordova build android --debug`; `apkanalyzer manifest print/permissions`; `unzip -l` per asset e plugin; `cordova plugins list`; `npm test` (171) | ✅ **DONE** | APK **4,4 MB** in `platforms/android/app/build/outputs/apk/debug/app-debug.apk`: `package=net.dntppe.realtor`, `versionName=1.0.0`, `versionCode=10000`, `minSdk=24`, `targetSdk=36`, firma debug, con `assets/www/{index.html,js/app.js,sw.js,manifest.webmanifest,js/core/storage.js}` e i plugin `cordova-plugin-dialogs` + `cordova-plugin-network-information`; `cordova platform add` da zero ripristina i plugin da `package.json`; unico permesso `INTERNET`. Corretti: `targetSdk/compileSdk` 35→36, preferenza `BackgroundColor` rimossa (rompeva `processDebugResources`), piattaforma legacy Ant in `/tmp`. `cordova-browser` scartato (ESM). AC ✅: AC-05, AC-18 (**18/22**) |
 | 2026-10-16 | M7 | `npm run lint`; `npm run docs:check`; `npm test` (172); `npm run test:coverage`; `npm run scan:secrets:history`; `git push` + `gh run watch`/`gh run view` su 3 run CI (`38887870715` failure → `38888347193` 4/5 → `38888682947` success); `gh run view --job <id> --log-failed` | ✅ **DONE** | **CI verde 5/5 job**: quality (lint+secrets+docs+172 test), e2e (desktop+mobile), android (APK + artifact), **ios su `macos-14`** (simulatore, senza firma), docker (build + health check + POST). Documentazione: 9 documenti verificati da `docs:check` (comandi npm e percorsi esistenti), 6 documenti nuovi + README con 4 screenshot. Lint ESLint 10 pulito. Tre problemi reali trovati dalla CI e risolti: (a) falsi positivi dello scanner su `storePassword=$VAR` e segnaposto (regola keystore ora cattura il valore e applica i controlli sui placeholder); (b) `cordova platform add ios` non funziona con `"type": "module"` → `scripts/ios-prepare.js` (`npm run prepare:ios`); (c) `android-actions/setup-android@v3` rotto sulle nuove cmdline-tools → `@v4` + licenze; inoltre `node --test tests/` non è più valido su Node 22 (gli argomenti sono glob) → scoperta automatica `node --test`. AC ✅: AC-02, AC-11, AC-15, AC-21 (**22/22**) |
-| 2026-10-16 | M8 | `npm run lint`; `npm test` (172); `npx playwright test` (39); `npm run docs:check`; `npm run scan:secrets:history`; coerenza versione in `package.json`/`config.xml`/`app.js`; `git tag -a v1.0.0` + `git push origin v1.0.0`; `gh run view 38889703129` (Release) e `38889700596` (CI); `gh release view v1.0.0`; `gh release download` + `unzip -l` | ✅ **DONE** | **Rilascio pubblicato**: https://github.com/donatopepe/Realtor/releases/tag/v1.0.0 con `realtor-web-v1.0.0.zip` (921 KB, 246 file di `www/`) e `app-debug.apk` (4,53 MB). Workflow **Release 3/3 job success** (pacchetto web, APK, GitHub Release) e **CI 5/5 success** sullo stesso commit; versioni allineate a 1.0.0. AC ✅: AC-15, AC-21 confermati sul rilascio (**22/22**) |
+| 2026-10-16 | M9 | `npm run lint`; `npm test` 207; `npm run server:test` 39; `npm run test:e2e --workers=2` 53 pass + 1 skip; `npm run sri:check` (17 file); `npm run audit:prod` (0 vuln); `npm run scan:secrets:history` (0); `npm run docs:check`; `npm run sbom` CycloneDX 1.5/294 componenti; smoke PWA `curl` (index/app 200, CSP/XFO presenti) | ✅ **gate locale** | CSP/header, XSS, backup cifrato, rate limit, audit IP pseudonimo senza query/token/body, timeout/limiti, SRI, audit runtime zero vulnerabilità. **Gate CI e build native pending** dopo aggiunta di job security/CodeQL. `npm audit` completo segnala solo devDependencies della toolchain Cordova; quello runtime (`--omit=dev`) è 0. Smoke CSP Cordova su dispositivo reale non eseguito. AC-23…AC-32 10/10 locali; non chiudere M9 globalmente finché CI non è verde. |
 
 ---
 
@@ -250,6 +263,11 @@ Regola di gate: un milestone è ✅ solo con output grezzo dei comandi registrat
 - **D-22** CI su GitHub Actions: `quality`, `e2e`, `android`, `ios` (macos-14) e `docker` a ogni push/PR; su tag `v*` la release pubblica pacchetto web e APK.
 - **D-23** Il rilascio 1.0.0 contiene l'APK **debug** (firma di release non disponibile senza keystore esterno); `release.yml` produce l'APK firmato automaticamente se i quattro segreti di firma sono configurati.
 - **D-24** Il pacchetto web include tutto `www/`, comprese le varianti non minificate di jQuery ereditate dal progetto 2014: sono inutili a runtime e verranno rimosse in una prossima revisione (vedi §11).
+- **D-25** Sicurezza "by default": la CSP vieta script inline ed `eval`; l'unica concessione è `style-src 'unsafe-inline'`, richiesta da jQuery Mobile (documentata come rischio accettato).
+- **D-26** `base-uri 'self'` invece di `'none'`: jQuery Mobile imposta una base URI per la navigazione hash; resta comunque vincolata all'origine.
+- **D-27** `frame-ancestors` solo nell'header HTTP (nel `meta` i browser lo ignorano) e policy generata da un'unica fonte (`CONTENT_SECURITY_POLICY` / `..._META`).
+- **D-28** Il pinning dei file è una verifica di pipeline e non un attributo `integrity=` a runtime: su iOS le risorse arrivano da `file://`, dove la verifica del browser è inaffidabile e rischierebbe di bloccare l'app.
+- **D-29** L'audit `npm audit` è bloccante solo sulle dipendenze di **produzione**: le vulnerabilità della toolchain di sviluppo (cordova-ios → xcode → uuid) restano visibili nel report di CI e gestite da Dependabot (rischio accettato in `SECURITY.md`).
 
 ---
 

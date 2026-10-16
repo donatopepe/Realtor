@@ -30,6 +30,10 @@ endpoint REST configurato dall'utente e server di riferimento incluso.
 - **PWA installabile** con service worker: l'app si apre anche senza rete.
 - Stessa interfaccia su Android e iOS tramite Cordova, con plugin nativi (dialoghi, stato rete) e fallback web.
 - Server API di riferimento (Node, zero dipendenze) con archivio JSON atomico, Docker e health check.
+- **Sicurezza**: CSP senza script inline, header di sicurezza, pinning SRI dei file dell'app,
+  **backup cifrato** (AES-256-GCM + PBKDF2), rate limiting, audit log pseudonimizzato,
+  scansione dei segreti su working tree e storia, SBOM, Dependabot e CodeQL in CI.
+- **Test**: 207 unit/integration Node + 53 E2E passati (1 skip mobile-only screenshot).
 
 ## Requisiti
 
@@ -78,6 +82,11 @@ npm run server:test       # solo i test dell'API di riferimento
 npm run lint              # ESLint su app, server, script e test
 npm run scan:secrets      # scansione segreti nel working tree
 npm run scan:secrets:history  # scansione segreti in tutta la storia git
+npm run sri:check         # integrità dei file dell'app (hash SHA-384)
+npm run sri:update        # aggiorna gli hash dopo modifiche legittime all'app shell
+npm run audit:prod        # vulnerabilità nelle dipendenze di produzione
+npm run audit:report      # report completo (inclusa la toolchain di sviluppo)
+npm run sbom              # genera sbom.cdx.json (CycloneDX)
 npm run docs:check        # verifica che la documentazione sia eseguibile
 ```
 
@@ -166,6 +175,18 @@ Nessun ramo condizionale per piattaforma nel codice: le differenze passano da
 | `npm run test:e2e` chiede un browser | `npx playwright install chromium` |
 | `cordova platform add ios` termina con "module is not defined in ES module scope" | Usa `npm run prepare:ios`: gestisce l'incompatibilità fra i file CommonJS di cordova-ios e `"type": "module"` |
 | L'invio dice "Endpoint API non configurato" | È il comportamento previsto in modalità offline: imposta l'endpoint in Impostazioni |
+| Il browser segnala violazioni CSP in console | È la policy attiva: apri una issue con il messaggio, non allentare la CSP per aggirarla |
+| Backup cifrato: "Password errata o file danneggiato" | La password è diversa da quella usata per esportare, oppure il file è stato modificato: la cifratura autentica il contenuto e non restituisce dati parziali |
+
+## Sicurezza
+
+Realtor non ha telemetria e non richiede account: le schede restano sul dispositivo e l'invio è
+opzionale, verso un endpoint configurato dall'utente. I controlli implementati (CSP, header,
+pinning SRI, backup cifrato con password, rate limiting, audit log senza dati personali, scansione
+segreti, SBOM, Dependabot, CodeQL, action pinnate a SHA), le verifiche ripetibili e i rischi
+accettati sono descritti in [SECURITY.md](SECURITY.md).
+
+Per segnalare una vulnerabilità non aprire una issue pubblica: scrivi a **dnt.ppe@gmail.com**.
 
 ## Licenza
 
