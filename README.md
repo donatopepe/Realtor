@@ -186,7 +186,7 @@ pinning SRI, backup cifrato con password, rate limiting, audit log senza dati pe
 segreti, SBOM, Dependabot, CodeQL, action pinnate a SHA), le verifiche ripetibili e i rischi
 accettati sono descritti in [SECURITY.md](SECURITY.md).
 
-Per segnalare una vulnerabilità non aprire una issue pubblica: scrivi a **[PRIVATE_EMAIL]**.
+Per segnalare una vulnerabilità non aprire una issue pubblica: scrivi a **contact@example.invalid**.
 
 ## Licenza
 

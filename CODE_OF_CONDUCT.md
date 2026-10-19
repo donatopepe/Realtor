@@ -34,7 +34,7 @@ I manutentori possono rimuovere commenti, chiudere issue o pull request e, nei c
 bloccare la partecipazione. Le decisioni saranno comunicate in privato a chi è coinvolto,
 motivando il motivo.
 
-Per segnalare un comportamento scorretto, scrivi a **[PRIVATE_EMAIL]**. Le segnalazioni
+Per segnalare un comportamento scorretto, scrivi a **contact@example.invalid**. Le segnalazioni
 sono trattate con riservatezza; i manutentori coinvolti in un episodio si astengono dalla
 valutazione.
 

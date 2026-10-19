@@ -13,7 +13,7 @@ rischi accettati. Riferimenti: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) per 
 
 ## Come segnalare una vulnerabilità
 
-Non aprire una issue pubblica. Scrivi a **[PRIVATE_EMAIL]** indicando:
+Non aprire una issue pubblica. Scrivi a **contact@example.invalid** indicando:
 
 - descrizione del problema e impatto;
 - passi per riprodurlo o prova di concetto;
